@@ -11,10 +11,14 @@ export type ConnectionStatus =
   | { state: 'connecting'; serverName: string }
   | {
       state: 'on'
+      /** Выбранный сервер; в режиме «авто» — название группы. */
       serverName: string
+      mode: 'manual' | 'auto'
       since: number
       coreVersion: string | null
       ports: CorePorts
+      /** Секрет Clash API этого запуска ядра — для диагностики в попапе и настройках. */
+      clashApiSecret: string
     }
   | { state: 'error'; message: string }
 
@@ -29,3 +33,4 @@ export const instanceIdItem = storage.defineItem<string>('local:instanceId', {
 })
 
 export const RECONNECT_MESSAGE = 'connection:reconnect'
+export const CORE_LOG_MESSAGE = 'connection:core-log'

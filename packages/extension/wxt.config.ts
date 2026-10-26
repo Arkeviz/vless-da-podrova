@@ -8,6 +8,7 @@ export const FIREFOX_EXTENSION_ID = 'vless-da-podrova@extension'
 export default defineConfig({
   srcDir: 'src',
   entrypointsDir: 'app/entrypoints',
+  publicDir: 'src/app/public',
   modules: ['@wxt-dev/module-vue'],
   vite: () => ({
     build: {
@@ -27,11 +28,22 @@ export default defineConfig({
       'storage',
       'proxy',
       'nativeMessaging',
-      // URL активной вкладки для кнопки «этот сайт» — только когда открыт попап.
-      'activeTab',
-      // Firefox (MV2): proxy.onRequest видит только запросы к разрешённым хостам.
+      // Будильник автообновления подписок.
+      'alarms',
+      // URL вкладок: бейдж P/D на иконке и кнопка «этот сайт» в попапе.
+      'tabs',
+      // Firefox (MV2): proxy.onRequest видит только запросы к разрешённым хостам;
+      // заодно это доступ к подпискам и к Clash API ядра.
       ...(browser === 'firefox' ? ['<all_urls>'] : []),
     ],
+    ...(browser === 'firefox'
+      ? {}
+      : {
+          // Clash API ядра на localhost.
+          host_permissions: ['http://127.0.0.1/*'],
+          // Доступ к адресам подписок запрашивается при добавлении подписки.
+          optional_host_permissions: ['https://*/*', 'http://*/*'],
+        }),
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {

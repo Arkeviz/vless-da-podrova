@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { browser } from 'wxt/browser'
 import { ru } from '@/common/i18n/ru'
 import { ConnectionPanel } from '@/modules/connection'
+import { TrafficBar, useLatency } from '@/modules/diagnostics'
 import { SiteRuleControl } from '@/modules/routing'
 import { ServersSection, useServers } from '@/modules/servers'
 
-const { selected } = useServers()
-const canEnable = computed(() => selected.value !== null)
+const { hasSelection } = useServers()
+const { latency, canTest, testAll } = useLatency()
 
 function openOptions() {
   void browser.runtime.openOptionsPage()
@@ -20,9 +20,10 @@ function openOptions() {
       <h1 class="popup__title">{{ ru.appName }}</h1>
       <button class="link-button" type="button" @click="openOptions">{{ ru.options.open }}</button>
     </header>
-    <ConnectionPanel :can-enable="canEnable" />
+    <ConnectionPanel :can-enable="hasSelection" />
+    <TrafficBar />
     <SiteRuleControl />
-    <ServersSection />
+    <ServersSection :latency="latency" :can-test-latency="canTest !== null" @test-latency="testAll" />
   </main>
 </template>
 

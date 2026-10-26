@@ -2,11 +2,14 @@
 import { computed } from 'vue'
 import type { DeepReadonly } from 'vue'
 import { ru } from '@/common/i18n/ru'
+import type { ServerLatency } from '../model/latency'
 import type { StoredServer } from '../model/storage'
 
 const props = defineProps<{
   server: DeepReadonly<StoredServer>
   selected: boolean
+  removable: boolean
+  latency?: ServerLatency
 }>()
 
 const emit = defineEmits<{
@@ -17,6 +20,21 @@ const emit = defineEmits<{
 const details = computed(() => {
   const { address, port, transport, security } = props.server.server
   return `${address}:${port} · ${transport.type} · ${security.type}`
+})
+
+const latencyLabel = computed(() => {
+  const latency = props.latency
+  if (latency === undefined) return null
+  if (latency === 'testing') return '…'
+  if (latency === 'error') return ru.servers.latencyError
+  return ru.servers.ms(latency)
+})
+
+const latencyClass = computed(() => {
+  const latency = props.latency
+  if (latency === 'error') return 'latency--bad'
+  if (typeof latency !== 'number') return ''
+  return latency < 300 ? 'latency--good' : latency < 800 ? 'latency--ok' : 'latency--bad'
 })
 </script>
 
@@ -29,7 +47,14 @@ const details = computed(() => {
         <span class="server__details">{{ details }}</span>
       </span>
     </label>
-    <button class="server__remove" type="button" :title="ru.servers.remove" @click="emit('remove')">
+    <span v-if="latencyLabel" class="latency" :class="latencyClass">{{ latencyLabel }}</span>
+    <button
+      v-if="removable"
+      class="icon-button"
+      type="button"
+      :title="ru.servers.remove"
+      @click="emit('remove')"
+    >
       ×
     </button>
   </li>
@@ -39,7 +64,7 @@ const details = computed(() => {
 .server {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 6px 8px;
   border-radius: 6px;
 }
@@ -74,15 +99,21 @@ const details = computed(() => {
   font-size: 11px;
 }
 
-.server__remove {
-  border: 0;
-  background: none;
+.latency {
+  flex: 0 0 auto;
+  font-size: 11px;
   color: var(--muted);
-  font-size: 16px;
-  cursor: pointer;
 }
 
-.server__remove:hover {
+.latency--good {
+  color: var(--ok);
+}
+
+.latency--ok {
+  color: var(--warn);
+}
+
+.latency--bad {
   color: var(--danger);
 }
 </style>

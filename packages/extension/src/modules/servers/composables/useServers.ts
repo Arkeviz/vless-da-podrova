@@ -1,12 +1,18 @@
 import { computed } from 'vue'
 import { useStorageItem } from '@/common/storage/useStorageItem'
-import { selectedServerIdItem, serversItem } from '../model/storage'
+import { collectServers } from '../model/servers'
+import { AUTO_SELECTION, selectedServerIdItem, serversItem, subscriptionsItem } from '../model/storage'
 
 export function useServers() {
-  const { value: servers } = useStorageItem(serversItem)
+  const { value: manual } = useStorageItem(serversItem)
+  const { value: subscriptions } = useStorageItem(subscriptionsItem)
   const { value: selectedId } = useStorageItem(selectedServerIdItem)
 
-  const selected = computed(() => servers.value.find((s) => s.id === selectedId.value) ?? null)
+  const all = computed(() => collectServers(manual.value, subscriptions.value))
+  const isAuto = computed(() => selectedId.value === AUTO_SELECTION)
+  const selected = computed(() => all.value.find((s) => s.id === selectedId.value) ?? null)
+  /** Есть с чем включаться: выбран сервер или «авто» при непустом списке. */
+  const hasSelection = computed(() => selected.value !== null || (isAuto.value && all.value.length > 0))
 
-  return { servers, selectedId, selected }
+  return { manual, subscriptions, all, selectedId, selected, isAuto, hasSelection }
 }

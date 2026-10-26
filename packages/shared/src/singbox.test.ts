@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSingboxConfig, DEFAULT_DOH_URL } from './singbox'
+import { buildSingboxConfig, DEFAULT_DOH_URL, type BuildConfigInput } from './singbox'
 import type { VlessServer } from './vless'
 
 const realityServer: VlessServer = {
@@ -20,15 +20,22 @@ const realityServer: VlessServer = {
 
 const ports = { auto: 20001, proxy: 20002, clashApi: 20003 }
 
+function build(overrides: Partial<BuildConfigInput> = {}) {
+  return buildSingboxConfig({
+    servers: [{ tag: 'srv-a', server: realityServer }],
+    selection: { mode: 'manual', tag: 'srv-a' },
+    ports,
+    clashApiSecret: 'secret',
+    dohUrl: DEFAULT_DOH_URL,
+    ...overrides,
+  })
+}
+
+const outbounds = (config: Record<string, unknown>) => config.outbounds as Record<string, unknown>[]
+
 describe('buildSingboxConfig', () => {
   it('собирает конфиг для reality + vision', () => {
-    const config = buildSingboxConfig({
-      server: realityServer,
-      ports,
-      clashApiSecret: 'secret',
-      dohUrl: DEFAULT_DOH_URL,
-    })
-    expect(config).toMatchInlineSnapshot(`
+    expect(build()).toMatchInlineSnapshot(`
       {
         "dns": {
           "final": "doh",
@@ -67,10 +74,19 @@ describe('buildSingboxConfig', () => {
         },
         "outbounds": [
           {
+            "default": "srv-a",
+            "interrupt_exist_connections": true,
+            "outbounds": [
+              "srv-a",
+            ],
+            "tag": "proxy",
+            "type": "selector",
+          },
+          {
             "flow": "xtls-rprx-vision",
             "server": "203.0.113.10",
             "server_port": 443,
-            "tag": "proxy",
+            "tag": "srv-a",
             "tls": {
               "enabled": true,
               "reality": {
@@ -109,14 +125,33 @@ describe('buildSingboxConfig', () => {
     `)
   })
 
-  it('добавляет bootstrap-резолвер, если DoH задан доменом', () => {
-    const config = buildSingboxConfig({
-      server: realityServer,
-      ports,
-      clashApiSecret: 's',
-      dohUrl: 'https://dns.google:8443/resolve',
+  it('режим «авто» — группа urltest из всех серверов', () => {
+    const config = build({
+      servers: [
+        { tag: 'srv-a', server: realityServer },
+        { tag: 'srv-b', server: { ...realityServer, address: '198.51.100.7' } },
+      ],
+      selection: { mode: 'auto' },
     })
-    expect(config.dns).toEqual({
+    expect(outbounds(config)[0]).toEqual({
+      type: 'urltest',
+      tag: 'proxy',
+      outbounds: ['srv-a', 'srv-b'],
+      url: 'https://www.gstatic.com/generate_204',
+      interval: '3m',
+      tolerance: 50,
+      interrupt_exist_connections: true,
+    })
+    expect(outbounds(config).map((o) => o.tag)).toEqual(['proxy', 'srv-a', 'srv-b', 'direct'])
+  })
+
+  it('отклоняет выбор несуществующего сервера и пустой список', () => {
+    expect(() => build({ selection: { mode: 'manual', tag: 'srv-x' } })).toThrow()
+    expect(() => build({ servers: [] })).toThrow()
+  })
+
+  it('добавляет bootstrap-резолвер, если DoH задан доменом', () => {
+    expect(build({ dohUrl: 'https://dns.google:8443/resolve' }).dns).toEqual({
       servers: [
         {
           type: 'https',
@@ -133,18 +168,20 @@ describe('buildSingboxConfig', () => {
   })
 
   it('собирает ws + tls транспорт', () => {
-    const config = buildSingboxConfig({
-      server: {
-        ...realityServer,
-        flow: undefined,
-        transport: { type: 'ws', path: '/ws', host: 'h.example.com', maxEarlyData: 2048 },
-        security: { type: 'tls', alpn: [], allowInsecure: false },
-      },
-      ports,
-      clashApiSecret: 's',
-      dohUrl: DEFAULT_DOH_URL,
+    const config = build({
+      servers: [
+        {
+          tag: 'srv-a',
+          server: {
+            ...realityServer,
+            flow: undefined,
+            transport: { type: 'ws', path: '/ws', host: 'h.example.com', maxEarlyData: 2048 },
+            security: { type: 'tls', alpn: [], allowInsecure: false },
+          },
+        },
+      ],
     })
-    const [vless] = config.outbounds as Record<string, unknown>[]
+    const vless = outbounds(config)[1]
     expect(vless).toMatchObject({
       tls: { enabled: true, server_name: '203.0.113.10' },
       transport: {
@@ -159,24 +196,22 @@ describe('buildSingboxConfig', () => {
   })
 
   it('отклоняет DoH не по https', () => {
-    expect(() =>
-      buildSingboxConfig({ server: realityServer, ports, clashApiSecret: 's', dohUrl: 'http://1.1.1.1' }),
-    ).toThrow()
+    expect(() => build({ dohUrl: 'http://1.1.1.1' })).toThrow()
   })
 })
 
 describe('правила ядра', () => {
-  const config = buildSingboxConfig({
-    server: realityServer,
-    ports,
-    clashApiSecret: 's',
-    dohUrl: DEFAULT_DOH_URL,
+  const config = build({
     defaultAction: 'direct',
     cacheFilePath: 'cache-abc.db',
     rules: [
       { id: 'b1', match: { type: 'suffix', value: 'twitch.tv' }, action: 'proxy' },
       { id: 'c1', match: { type: 'suffix', value: 'ads.com' }, action: 'block' },
-      { id: 'c2', match: { type: 'ruleSet', url: 'https://x.org/ru.srs', format: 'binary', updateIntervalHours: 12 }, action: 'direct' },
+      {
+        id: 'c2',
+        match: { type: 'ruleSet', url: 'https://x.org/ru.srs', format: 'binary', updateIntervalHours: 12 },
+        action: 'direct',
+      },
       { id: 'c3', match: { type: 'ip', value: '91.108.4.0/22' }, action: 'proxy' },
       { id: 'c4', match: { type: 'keyword', value: 'tracker' }, action: 'block' },
     ],
@@ -216,7 +251,7 @@ describe('правила ядра', () => {
   })
 
   it('без rule-set нет ни rule_set, ни кэша', () => {
-    const plain = buildSingboxConfig({ server: realityServer, ports, clashApiSecret: 's', dohUrl: DEFAULT_DOH_URL, cacheFilePath: 'x.db' })
+    const plain = build({ cacheFilePath: 'x.db' })
     expect(plain.route).not.toHaveProperty('rule_set')
     expect(plain.experimental).not.toHaveProperty('cache_file')
   })

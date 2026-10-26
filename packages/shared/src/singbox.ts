@@ -13,8 +13,23 @@ export const CORE_PORT_COUNT = 3
 
 export type CoreLogLevel = 'debug' | 'info' | 'warn' | 'error'
 
-export interface BuildConfigInput {
+/** Сервер в конфиге ядра: тег выхода стабилен, пока сервер существует. */
+export interface CoreServer {
+  tag: string
   server: VlessServer
+}
+
+/**
+ * Выход `proxy` — переключатель (selector) между всеми серверами или группа urltest.
+ * Ручной выбор меняется через Clash API без перезапуска ядра.
+ */
+export type ServerSelection = { mode: 'manual'; tag: string } | { mode: 'auto' }
+
+export const URL_TEST_URL = 'https://www.gstatic.com/generate_204'
+
+export interface BuildConfigInput {
+  servers: readonly CoreServer[]
+  selection: ServerSelection
   ports: CorePorts
   clashApiSecret: string
   dohUrl: string
@@ -41,7 +56,8 @@ type Json = Record<string, unknown>
 
 export function buildSingboxConfig(input: BuildConfigInput): Json {
   const {
-    server,
+    servers,
+    selection,
     ports,
     clashApiSecret,
     dohUrl,
@@ -50,6 +66,7 @@ export function buildSingboxConfig(input: BuildConfigInput): Json {
     cacheFilePath,
     logLevel = 'info',
   } = input
+  if (!servers.length) throw new Error('Нет серверов для конфига ядра')
   const coreRules = rules.filter((rule) => !isBrowserRule(rule))
   const ruleSets = buildRuleSets(coreRules)
 
@@ -60,7 +77,11 @@ export function buildSingboxConfig(input: BuildConfigInput): Json {
       { type: 'mixed', tag: TAG.inAuto, listen: '127.0.0.1', listen_port: ports.auto },
       { type: 'mixed', tag: TAG.inProxy, listen: '127.0.0.1', listen_port: ports.proxy },
     ],
-    outbounds: [buildVlessOutbound(server), { type: 'direct', tag: TAG.direct }],
+    outbounds: [
+      buildProxyGroup(servers, selection),
+      ...servers.map(({ tag, server }) => buildVlessOutbound(server, tag)),
+      { type: 'direct', tag: TAG.direct },
+    ],
     route: {
       rules: [
         { inbound: [TAG.inProxy], action: 'route', outbound: TAG.proxy },
@@ -79,6 +100,30 @@ export function buildSingboxConfig(input: BuildConfigInput): Json {
         ? { cache_file: { enabled: true, path: cacheFilePath } }
         : {}),
     },
+  }
+}
+
+function buildProxyGroup(servers: readonly CoreServer[], selection: ServerSelection): Json {
+  const tags = servers.map((s) => s.tag)
+  if (selection.mode === 'auto') {
+    return {
+      type: 'urltest',
+      tag: TAG.proxy,
+      outbounds: tags,
+      url: URL_TEST_URL,
+      interval: '3m',
+      tolerance: 50,
+      interrupt_exist_connections: true,
+    }
+  }
+  if (!tags.includes(selection.tag)) throw new Error(`Сервер ${selection.tag} не найден`)
+  return {
+    type: 'selector',
+    tag: TAG.proxy,
+    outbounds: tags,
+    default: selection.tag,
+    // При смене сервера открытые соединения рвутся и переподключаются уже через новый.
+    interrupt_exist_connections: true,
   }
 }
 
@@ -170,10 +215,10 @@ function buildDns(dohUrl: string): Json {
   }
 }
 
-export function buildVlessOutbound(server: VlessServer): Json {
+export function buildVlessOutbound(server: VlessServer, tag: string): Json {
   const outbound: Json = {
     type: 'vless',
-    tag: TAG.proxy,
+    tag,
     server: server.address,
     server_port: server.port,
     uuid: server.uuid,

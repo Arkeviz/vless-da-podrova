@@ -1,18 +1,22 @@
 import {
   buildSingboxConfig,
+  clashSelect,
   compileDomainRules,
   CORE_PORT_COUNT,
   DEFAULT_DOH_URL,
   PROTOCOL_VERSION,
+  TAG,
   type CorePorts,
+  type CoreServer,
   type HelperEvent,
 } from '@vdp/shared'
 import { browser } from 'wxt/browser'
 import { ru } from '@/common/i18n/ru'
 import { getRoutingSnapshot, watchRouting, type RoutingSnapshot } from '@/modules/routing'
-import { getSelectedServer, watchSelectedServer, type StoredServer } from '@/modules/servers'
+import { getServerPool, serverTag, watchServers, type ServerPool } from '@/modules/servers'
 import {
   connectionStatusItem,
+  CORE_LOG_MESSAGE,
   instanceIdItem,
   proxyEnabledItem,
   RECONNECT_MESSAGE,
@@ -20,17 +24,22 @@ import {
 import { HelperClient } from './helper-client'
 import { applyProxy, clearProxy, installFirefoxProxyListener } from './proxy'
 
+const CORE_LOG_LINES = 300
+
 interface Running {
   /** Всё, что попадает в конфиг ядра: при изменении ядро перезапускается. */
   coreKey: string
   /** Доменные правила браузера: при изменении меняется только PAC / onRequest. */
   browserKey: string
+  /** Выбранный сервер в ручном режиме: меняется через Clash API без перезапуска. */
+  selectedTag: string | null
   ports: CorePorts
+  clashApiSecret: string
 }
 
 /**
  * Приводит фактическое состояние (хелпер, ядро, настройки прокси) к желаемому
- * (proxyEnabled, выбранный сервер, правила). Все переходы идут строго по очереди.
+ * (proxyEnabled, серверы и выбор, правила). Все переходы идут строго по очереди.
  */
 class ConnectionService {
   private helper: HelperClient | null = null
@@ -52,11 +61,20 @@ class ConnectionService {
     this.reconcile()
   }
 
+  async coreLog(): Promise<string[]> {
+    if (!this.helper) return []
+    try {
+      return (await this.helper.call('log', { lines: CORE_LOG_LINES })).lines
+    } catch {
+      return []
+    }
+  }
+
   private async doReconcile(force: boolean): Promise<void> {
     const enabled = await proxyEnabledItem.getValue()
-    const selected = enabled ? await getSelectedServer() : null
+    const pool = enabled ? await getServerPool() : null
 
-    if (!enabled || !selected) {
+    if (!enabled || !pool) {
       await this.shutdown()
       if (enabled) await proxyEnabledItem.setValue(false)
       await connectionStatusItem.setValue({ state: 'off' })
@@ -64,30 +82,47 @@ class ConnectionService {
     }
 
     const routing = await getRoutingSnapshot()
-    const coreKey = JSON.stringify([selected.server, routing.coreRules, routing.defaultAction])
+    const servers: CoreServer[] = pool.servers.map((s) => ({ tag: serverTag(s.id), server: s.server }))
+    const selectedTag = pool.mode === 'manual' ? serverTag(pool.selected.id) : null
+    const coreKey = JSON.stringify([servers, pool.mode, routing.coreRules, routing.defaultAction])
     const browserKey = JSON.stringify(routing.browserRules)
 
-    if (force || this.running?.coreKey !== coreKey) {
-      await this.connect(selected, routing, { coreKey, browserKey })
+    const running = this.running
+    if (force || running?.coreKey !== coreKey) {
+      await this.connect(pool, servers, routing, { coreKey, browserKey, selectedTag })
       return
     }
 
-    if (this.running.browserKey !== browserKey) {
-      try {
-        await applyProxy(this.running.ports, compileDomainRules(routing.browserRules))
-        this.running.browserKey = browserKey
-      } catch (error) {
-        await this.fail((error as Error).message)
+    try {
+      if (pool.mode === 'manual' && selectedTag && running.selectedTag !== selectedTag) {
+        await clashSelect(
+          { port: running.ports.clashApi, secret: running.clashApiSecret },
+          TAG.proxy,
+          selectedTag,
+        )
+        running.selectedTag = selectedTag
+        const status = await connectionStatusItem.getValue()
+        if (status.state === 'on') {
+          await connectionStatusItem.setValue({ ...status, serverName: pool.selected.server.name })
+        }
       }
+      if (running.browserKey !== browserKey) {
+        await applyProxy(running.ports, compileDomainRules(routing.browserRules))
+        running.browserKey = browserKey
+      }
+    } catch (error) {
+      console.warn('[connection] не удалось применить изменения на лету, перезапуск ядра', error)
+      await this.connect(pool, servers, routing, { coreKey, browserKey, selectedTag })
     }
   }
 
   private async connect(
-    selected: StoredServer,
+    pool: ServerPool,
+    servers: CoreServer[],
     routing: RoutingSnapshot,
-    keys: Pick<Running, 'coreKey' | 'browserKey'>,
+    keys: Pick<Running, 'coreKey' | 'browserKey' | 'selectedTag'>,
   ): Promise<void> {
-    const serverName = selected.server.name
+    const serverName = pool.mode === 'manual' ? pool.selected.server.name : ru.servers.autoName
     await connectionStatusItem.setValue({ state: 'connecting', serverName })
 
     try {
@@ -100,11 +135,13 @@ class ConnectionService {
       const { ports: allocated } = await helper.call('allocatePorts', { count: CORE_PORT_COUNT })
       const [auto, proxy, clashApi] = allocated as [number, number, number]
       const ports: CorePorts = { auto, proxy, clashApi }
+      const clashApiSecret = randomSecret()
 
       const config = buildSingboxConfig({
-        server: selected.server,
+        servers,
+        selection: keys.selectedTag ? { mode: 'manual', tag: keys.selectedTag } : { mode: 'auto' },
         ports,
-        clashApiSecret: randomSecret(),
+        clashApiSecret,
         dohUrl: DEFAULT_DOH_URL,
         rules: routing.coreRules,
         defaultAction: routing.defaultAction,
@@ -113,13 +150,15 @@ class ConnectionService {
       await helper.call('start', { config, readinessPort: ports.auto })
       await applyProxy(ports, compileDomainRules(routing.browserRules))
 
-      this.running = { ...keys, ports }
+      this.running = { ...keys, ports, clashApiSecret }
       await connectionStatusItem.setValue({
         state: 'on',
         serverName,
+        mode: pool.mode,
         since: Date.now(),
         coreVersion: hello.coreVersion,
         ports,
+        clashApiSecret,
       })
     } catch (error) {
       await this.fail((error as Error).message)
@@ -176,10 +215,16 @@ export function startConnectionService(): void {
 
   const service = new ConnectionService()
   proxyEnabledItem.watch(() => service.reconcile())
-  watchSelectedServer(() => service.reconcile())
+  watchServers(() => service.reconcile())
   watchRouting(() => service.reconcile())
-  browser.runtime.onMessage.addListener((message: unknown) => {
-    if ((message as { type?: unknown })?.type === RECONNECT_MESSAGE) service.reconcile(true)
+  browser.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+    const type = (message as { type?: unknown })?.type
+    if (type === RECONNECT_MESSAGE) service.reconcile(true)
+    if (type === CORE_LOG_MESSAGE) {
+      void service.coreLog().then((lines) => sendResponse({ lines }))
+      return true
+    }
+    return undefined
   })
 
   service.enqueue(() => service.init())

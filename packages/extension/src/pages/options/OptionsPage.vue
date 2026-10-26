@@ -1,12 +1,28 @@
 <script setup lang="ts">
 import { ru } from '@/common/i18n/ru'
+import { DiagnosticsPanel } from '@/modules/diagnostics'
 import { RulesEditor } from '@/modules/routing'
+import { SubscriptionsSection } from '@/modules/servers'
 </script>
 
 <template>
   <main class="options">
     <h1 class="options__title">{{ ru.options.title }}</h1>
-    <RulesEditor />
+
+    <section class="options__section">
+      <h2 class="options__heading">{{ ru.subscriptions.title }}</h2>
+      <SubscriptionsSection />
+    </section>
+
+    <section class="options__section">
+      <h2 class="options__heading">{{ ru.options.rules }}</h2>
+      <RulesEditor />
+    </section>
+
+    <section class="options__section">
+      <h2 class="options__heading">{{ ru.diagnostics.title }}</h2>
+      <DiagnosticsPanel />
+    </section>
   </main>
 </template>
 
@@ -17,11 +33,24 @@ import { RulesEditor } from '@/modules/routing'
   padding: 24px 16px 48px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
+  gap: 32px;
 }
 
 .options__title {
   margin: 0;
   font-size: 20px;
+}
+
+.options__section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.options__heading {
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 17px;
 }
 </style>
