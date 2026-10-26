@@ -25,6 +25,7 @@ const details = computed(() => {
 })
 
 const errorMessage = computed(() => (status.value.state === 'error' ? status.value.message : null))
+const blocked = computed(() => status.value.state === 'error' && status.value.blocked === true)
 const toggleDisabled = computed(() => !enabled.value && !props.canEnable)
 </script>
 
@@ -51,6 +52,7 @@ const toggleDisabled = computed(() => !enabled.value && !props.canEnable)
 
     <div v-if="errorMessage" class="panel__error">
       <p>{{ errorMessage }}</p>
+      <p v-if="blocked"><strong>{{ ru.notifications.failureBlocked }}</strong></p>
       <button class="button" type="button" @click="reconnect">{{ ru.connection.reconnect }}</button>
     </div>
   </section>

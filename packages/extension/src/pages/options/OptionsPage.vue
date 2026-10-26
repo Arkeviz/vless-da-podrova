@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ru } from '@/common/i18n/ru'
+import { BackupPanel } from '@/modules/backup'
 import { DiagnosticsPanel } from '@/modules/diagnostics'
 import { RulesEditor } from '@/modules/routing'
 import { SubscriptionsSection } from '@/modules/servers'
+import { SettingsPanel } from '@/modules/settings'
 import { TabModeSettings } from '@/modules/tab-mode'
 </script>
 
@@ -23,6 +25,16 @@ import { TabModeSettings } from '@/modules/tab-mode'
     <section class="options__section">
       <h2 class="options__heading">{{ ru.options.tabMode }}</h2>
       <TabModeSettings />
+    </section>
+
+    <section class="options__section">
+      <h2 class="options__heading">{{ ru.settings.title }}</h2>
+      <SettingsPanel />
+    </section>
+
+    <section class="options__section">
+      <h2 class="options__heading">{{ ru.backup.title }}</h2>
+      <BackupPanel />
     </section>
 
     <section class="options__section">

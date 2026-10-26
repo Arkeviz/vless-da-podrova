@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { buildPacScript, isBypassedHost, matchDomainSet, resolveBrowserRoute, toDomainSet } from './pac'
+import {
+  buildKillSwitchPacScript,
+  buildPacScript,
+  isBypassedHost,
+  KILL_SWITCH_PORT,
+  matchDomainSet,
+  resolveBrowserRoute,
+  toDomainSet,
+} from './pac'
 import { compileDomainRules } from './rules'
 
 const bypassed = [
@@ -81,5 +89,24 @@ describe('принудительный прокси (режим вкладки)'
     expect(matchDomainSet('TWITCH.TV.', forcedProxy)).toBe(true)
     expect(matchDomainSet('a.b.twitch.tv', forcedProxy)).toBe(true)
     expect(matchDomainSet('tv', forcedProxy)).toBe(false)
+  })
+})
+
+describe('настройки PAC', () => {
+  const domainRules = compileDomainRules([])
+
+  it('без удалённого DNS — SOCKS4 (имя резолвит браузер)', () => {
+    const pac = buildPacScript({ autoPort: 1, proxyPort: 2, domainRules, remoteDns: false })
+    const findProxy = new Function(`${pac}; return FindProxyForURL`)() as (url: string, host: string) => string
+    expect(findProxy('https://ya.ru/', 'ya.ru')).toBe('SOCKS 127.0.0.1:1')
+  })
+
+  it('kill-switch блокирует всё, кроме локальных адресов', () => {
+    const findProxy = new Function(`${buildKillSwitchPacScript()}; return FindProxyForURL`)() as (
+      url: string,
+      host: string,
+    ) => string
+    expect(findProxy('https://ya.ru/', 'ya.ru')).toBe(`SOCKS5 127.0.0.1:${KILL_SWITCH_PORT}`)
+    expect(findProxy('http://192.168.1.1/', '192.168.1.1')).toBe('DIRECT')
   })
 })

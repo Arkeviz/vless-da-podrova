@@ -3,7 +3,6 @@ import {
   clashSelect,
   compileDomainRules,
   CORE_PORT_COUNT,
-  DEFAULT_DOH_URL,
   PROTOCOL_VERSION,
   TAG,
   type CorePorts,
@@ -14,6 +13,7 @@ import { browser } from 'wxt/browser'
 import { ru } from '@/common/i18n/ru'
 import { getRoutingSnapshot, watchRouting, type RoutingSnapshot } from '@/modules/routing'
 import { getServerPool, serverTag, watchServers, type ServerPool } from '@/modules/servers'
+import { getSettings, watchSettings, type Settings } from '@/modules/settings'
 import { getTabModeState, watchTabMode } from '@/modules/tab-mode'
 import {
   connectionStatusItem,
@@ -23,7 +23,10 @@ import {
   RECONNECT_MESSAGE,
 } from '../model/storage'
 import { HelperClient } from './helper-client'
+import { notifyFailure } from './notify'
+import { setWebrtcProtection } from './privacy'
 import {
+  applyKillSwitch,
   applyProxy,
   browserProxyKey,
   clearProxy,
@@ -63,7 +66,11 @@ class ConnectionService {
 
   async init(): Promise<void> {
     // Chromium сохраняет настройки прокси между запусками, а порты ядра — уже нет.
-    await clearProxy()
+    // С kill-switch до подключения трафик не выпускаем напрямую.
+    const [enabled, settings] = await Promise.all([proxyEnabledItem.getValue(), getSettings()])
+    if (enabled && settings.killSwitch) await applyKillSwitch()
+    else await clearProxy()
+    await setWebrtcProtection(false)
     await connectionStatusItem.setValue({ state: 'off' })
     this.reconcile()
   }
@@ -89,18 +96,20 @@ class ConnectionService {
     }
 
     const routing = await getRoutingSnapshot()
+    const settings = await getSettings()
     const browserState: BrowserProxyState = {
       domainRules: compileDomainRules(routing.browserRules),
       tabMode: await getTabModeState(),
+      remoteDns: settings.remoteDns,
     }
     const servers: CoreServer[] = pool.servers.map((s) => ({ tag: serverTag(s.id), server: s.server }))
     const selectedTag = pool.mode === 'manual' ? serverTag(pool.selected.id) : null
-    const coreKey = JSON.stringify([servers, pool.mode, routing.coreRules, routing.defaultAction])
+    const coreKey = JSON.stringify([servers, pool.mode, routing.coreRules, routing.defaultAction, settings.dohUrl])
     const browserKey = browserProxyKey(browserState)
 
     const running = this.running
     if (force || running?.coreKey !== coreKey) {
-      await this.connect(pool, servers, routing, browserState, { coreKey, browserKey, selectedTag })
+      await this.connect(pool, servers, routing, settings, browserState, { coreKey, browserKey, selectedTag })
       return
     }
 
@@ -121,9 +130,10 @@ class ConnectionService {
         await applyProxy(running.ports, browserState)
         running.browserKey = browserKey
       }
+      await setWebrtcProtection(settings.webrtcProtection)
     } catch (error) {
       console.warn('[connection] не удалось применить изменения на лету, перезапуск ядра', error)
-      await this.connect(pool, servers, routing, browserState, { coreKey, browserKey, selectedTag })
+      await this.connect(pool, servers, routing, settings, browserState, { coreKey, browserKey, selectedTag })
     }
   }
 
@@ -131,6 +141,7 @@ class ConnectionService {
     pool: ServerPool,
     servers: CoreServer[],
     routing: RoutingSnapshot,
+    settings: Settings,
     browserState: BrowserProxyState,
     keys: Pick<Running, 'coreKey' | 'browserKey' | 'selectedTag'>,
   ): Promise<void> {
@@ -154,13 +165,14 @@ class ConnectionService {
         selection: keys.selectedTag ? { mode: 'manual', tag: keys.selectedTag } : { mode: 'auto' },
         ports,
         clashApiSecret,
-        dohUrl: DEFAULT_DOH_URL,
+        dohUrl: settings.dohUrl,
         rules: routing.coreRules,
         defaultAction: routing.defaultAction,
         cacheFilePath: `cache-${await instanceIdItem.getValue()}.db`,
       })
       await helper.call('start', { config, readinessPort: ports.auto })
       await applyProxy(ports, browserState)
+      await setWebrtcProtection(settings.webrtcProtection)
 
       this.running = { ...keys, ports, clashApiSecret }
       await connectionStatusItem.setValue({
@@ -182,7 +194,7 @@ class ConnectionService {
       onEvent: (event) => this.enqueue(() => this.onHelperEvent(helper, event)),
       onDisconnect: (message) =>
         this.enqueue(async () => {
-          if (this.helper === helper) await this.fail(message)
+          if (this.helper === helper) await this.fail(message, { unexpected: true })
         }),
     })
     this.helper = helper
@@ -192,17 +204,28 @@ class ConnectionService {
   private async onHelperEvent(helper: HelperClient, event: HelperEvent): Promise<void> {
     if (this.helper !== helper || event.event !== 'core-exited') return
     const lastLine = event.logTail.findLast((line) => !line.startsWith('[helper]'))
-    await this.fail(lastLine ? `${ru.errors.coreExited}: ${lastLine}` : ru.errors.coreExited)
+    const message = lastLine ? `${ru.errors.coreExited}: ${lastLine}` : ru.errors.coreExited
+    await this.fail(message, { unexpected: true })
   }
 
-  /** Fail-open: прокси снимается, сайты открываются напрямую, пользователь видит ошибку. */
-  private async fail(message: string): Promise<void> {
+  /**
+   * По умолчанию fail-open: прокси снимается, сайты открываются напрямую.
+   * С kill-switch трафик блокируется до переподключения. Обрыв на ходу — с уведомлением.
+   */
+  private async fail(message: string, { unexpected = false } = {}): Promise<void> {
     await this.shutdown()
-    await connectionStatusItem.setValue({ state: 'error', message })
+    const settings = await getSettings()
+    const blocked = settings.killSwitch && (await proxyEnabledItem.getValue())
+    if (blocked) await applyKillSwitch()
+    await connectionStatusItem.setValue({ state: 'error', message, blocked })
+    if (unexpected && settings.notifyOnFailure) {
+      await notifyFailure(message, blocked).catch((error) => console.warn('[connection] уведомление', error))
+    }
   }
 
   private async shutdown(): Promise<void> {
     await clearProxy()
+    await setWebrtcProtection(false)
     this.running = null
 
     const helper = this.helper
@@ -230,6 +253,7 @@ export function startConnectionService(): void {
   watchServers(() => service.reconcile())
   watchRouting(() => service.reconcile())
   watchTabMode(() => service.reconcile())
+  watchSettings(() => service.reconcile())
   browser.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
     const type = (message as { type?: unknown })?.type
     if (type === RECONNECT_MESSAGE) service.reconcile(true)

@@ -12,6 +12,8 @@ src/
               diagnostics — задержки, трафик, текущий сервер «авто», лог ядра (Clash API)
               tab-mode — режим «вкладка через прокси»: Firefox по tabId, Chromium — обучение доменам
               indicator — цвет иконки и бейдж P/D/T на вкладке (фон)
+              settings — защита и сеть: WebRTC, DNS через прокси, kill-switch, уведомления, DoH
+              backup — экспорт и импорт настроек; состав копии модули объявляют через backupItems
   common/     i18n, storage (реактивная обёртка над WXT storage), browser (активная вкладка),
               utilities (форматирование, сайт хоста через tldts)
 ```

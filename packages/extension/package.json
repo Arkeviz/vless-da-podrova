@@ -12,7 +12,8 @@
     "zip:firefox": "wxt zip -b firefox",
     "typecheck": "vue-tsc --noEmit",
     "postinstall": "wxt prepare",
-    "icons": "node scripts/generate-icons.ts"
+    "icons": "node scripts/generate-icons.ts",
+    "sign:firefox": "node scripts/sign-firefox.ts"
   },
   "dependencies": {
     "@vdp/shared": "workspace:*",

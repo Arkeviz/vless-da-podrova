@@ -20,7 +20,12 @@ export type ConnectionStatus =
       /** Секрет Clash API этого запуска ядра — для диагностики в попапе и настройках. */
       clashApiSecret: string
     }
-  | { state: 'error'; message: string }
+  | {
+      state: 'error'
+      message: string
+      /** Kill-switch: трафик заблокирован до переподключения. */
+      blocked?: boolean
+    }
 
 /** Фактическое состояние — пишет только фоновый сервис. */
 export const connectionStatusItem = storage.defineItem<ConnectionStatus>('local:connectionStatus', {

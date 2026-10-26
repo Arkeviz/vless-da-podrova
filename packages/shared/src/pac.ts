@@ -68,11 +68,22 @@ export interface PacInput {
   proxyPort: number
   domainRules: DomainRuleTable
   forcedProxy?: DomainSet
+  /**
+   * true (по умолчанию) — SOCKS5: Chrome передаёт ядру имя хоста, DNS резолвит ядро.
+   * false — SOCKS4: имя резолвит браузер системным DNS.
+   */
+  remoteDns?: boolean
 }
 
-export function buildPacScript({ autoPort, proxyPort, domainRules, forcedProxy = {} }: PacInput): string {
-  const proxy = `'SOCKS5 127.0.0.1:${proxyPort}'`
-  // SOCKS5 в Chrome передаёт прокси имя хоста — DNS резолвится на стороне ядра.
+export function buildPacScript({
+  autoPort,
+  proxyPort,
+  domainRules,
+  forcedProxy = {},
+  remoteDns = true,
+}: PacInput): string {
+  const scheme = remoteDns ? 'SOCKS5' : 'SOCKS'
+  const proxy = `'${scheme} 127.0.0.1:${proxyPort}'`
   return [
     `var isBypassedHost = ${isBypassedHost.toString()};`,
     `var matchDomainSet = ${matchDomainSet.toString()};`,
@@ -85,7 +96,24 @@ export function buildPacScript({ autoPort, proxyPort, domainRules, forcedProxy =
     '  var action = matchDomainRules(host, RULES);',
     "  if (action === 'direct') return 'DIRECT';",
     `  if (action === 'proxy') return ${proxy};`,
-    `  return 'SOCKS5 127.0.0.1:${autoPort}';`,
+    `  return '${scheme} 127.0.0.1:${autoPort}';`,
+    '}',
+  ].join('\n')
+}
+
+/** Порт, на котором заведомо никто не слушает: соединение через него сразу отклоняется. */
+export const KILL_SWITCH_PORT = 1
+
+/**
+ * Kill-switch: всё, кроме localhost и локальной сети, отправляется в несуществующий прокси.
+ * Без DIRECT в списке Chrome не откатывается на прямое соединение — сайты не открываются.
+ */
+export function buildKillSwitchPacScript(): string {
+  return [
+    `var isBypassedHost = ${isBypassedHost.toString()};`,
+    'function FindProxyForURL(url, host) {',
+    "  if (isBypassedHost(host)) return 'DIRECT';",
+    `  return 'SOCKS5 127.0.0.1:${KILL_SWITCH_PORT}';`,
     '}',
   ].join('\n')
 }

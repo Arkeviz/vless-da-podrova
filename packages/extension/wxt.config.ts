@@ -9,6 +9,24 @@ export default defineConfig({
   srcDir: 'src',
   entrypointsDir: 'app/entrypoints',
   publicDir: 'src/app/public',
+  zip: {
+    // AMO просит исходники для собранного кода. Расширение зависит от packages/shared,
+    // поэтому архив исходников собирается от корня монорепо, без хелпера и секретов.
+    sourcesRoot: '../..',
+    excludeSources: [
+      '.git/**',
+      '.idea/**',
+      '.keys/**',
+      '.tools/**',
+      '.claude/**',
+      'packages/helper/**',
+      'scripts/**',
+      '**/node_modules/**',
+      '**/.output/**',
+      '**/.wxt/**',
+      '**/dist/**',
+    ],
+  },
   modules: ['@wxt-dev/module-vue'],
   vite: () => ({
     build: {
@@ -32,10 +50,15 @@ export default defineConfig({
       'alarms',
       // URL вкладок: бейдж P/D на иконке и кнопка «этот сайт» в попапе.
       'tabs',
+      // WebRTC без прямых соединений в обход прокси.
+      'privacy',
+      // Уведомление об обрыве подключения.
+      'notifications',
       // Firefox (MV2): proxy.onRequest видит только запросы к разрешённым хостам;
       // заодно это доступ к подпискам и к Clash API ядра.
       // Chromium: неблокирующий webRequest — обучение доменам в режиме вкладки.
-      ...(browser === 'firefox' ? ['<all_urls>'] : ['webRequest']),
+      // Firefox: блокирующий webRequest — kill-switch.
+      ...(browser === 'firefox' ? ['<all_urls>', 'webRequest', 'webRequestBlocking'] : ['webRequest']),
     ],
     ...(browser === 'firefox'
       ? {}
