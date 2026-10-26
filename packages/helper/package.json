@@ -1,0 +1,19 @@
+{
+  "name": "@vdp/helper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun src/main.ts",
+    "build": "bun build src/main.ts --compile --target=bun-windows-x64 --outfile dist/vless-da-podrova-helper.exe",
+    "typecheck": "tsc -p .",
+    "smoke": "bun test/smoke.ts"
+  },
+  "dependencies": {
+    "@vdp/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "bun": "^1.4.4"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.output/
+.wxt/
+.tools/
+.keys/
+*.log
+.idea/

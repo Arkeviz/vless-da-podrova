@@ -1,0 +1,62 @@
+# vless-da-podrova
+
+Браузерное расширение, которое пускает трафик браузера через собственный VLESS-сервер.
+VLESS-соединение держит sing-box, его запускает нативный хелпер через native messaging.
+Решения и этапы описаны в [docs/SPEC.md](docs/SPEC.md).
+
+```
+packages/
+  shared/     парсер vless://, генератор конфига sing-box, PAC, протокол хелпера (+ тесты)
+  helper/     нативный хост (Node/TS → exe через bun), Job Object для sing-box
+  extension/  WXT + Vue 3, структура FEOD
+scripts/      install.ps1 / uninstall.ps1
+```
+
+## Сборка
+
+```bash
+pnpm install
+pnpm test
+pnpm build
+```
+
+`pnpm build` собирает расширение в `packages/extension/.output/chrome-mv3` и `.output/firefox-mv2`
+и хелпер в `packages/helper/dist/vless-da-podrova-helper.exe`.
+
+## Установка хелпера
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+```
+
+Скрипт копирует хелпер и sing-box в `%LOCALAPPDATA%\vless-da-podrova` и регистрирует
+native host в `HKCU` для Chrome, Edge, Яндекс Браузера и Firefox. Версия sing-box закреплена в
+скрипте вместе с SHA256 архива. Пока хеш не вписан, скрипт печатает хеш скачанного архива и
+останавливается: сверьте его и впишите в `$SingBoxSha256` (или запустите с `-AllowUnpinnedHash`).
+
+Удаление: `scripts\uninstall.ps1`.
+
+## Загрузка расширения
+
+- **Chrome / Edge / Яндекс:** `chrome://extensions` → режим разработчика → «Загрузить распакованное» →
+  `packages/extension/.output/chrome-mv3`. ID должен быть `ambndojpohhjfclejjpbckmklinejioh`
+  (его фиксирует `key` в `wxt.config.ts`; приватный ключ лежит в `.keys/`, в git не попадает).
+- **Firefox:** `about:debugging` → «Этот Firefox» → «Загрузить временное дополнение» →
+  `packages/extension/.output/firefox-mv2/manifest.json`. Постоянная установка — после подписи
+  через AMO (этап 5). Для приватных окон разрешите расширению работать в них.
+
+## Ручная проверка (этап 1)
+
+1. Хелпер не установлен → «Включить» показывает ошибку про `install.ps1`.
+2. После `install.ps1` и перезапуска браузера: добавить ссылку `vless://…` → сервер появился и выбран.
+3. «Включить» → статус «Подключено», версия ядра видна; https://ifconfig.me показывает IP сервера.
+4. `http://localhost`, адреса `192.168.*` открываются напрямую.
+5. «Выключить» → IP снова свой, процесс `sing-box.exe` исчез из диспетчера задач.
+6. Включить и закрыть браузер → `sing-box.exe` и хелпер завершились.
+7. Включить, перезапустить браузер → подключение восстановилось само.
+8. Включить, убить `sing-box.exe` в диспетчере задач → статус «Ошибка», сайты открываются напрямую;
+   «Переподключить» поднимает ядро снова.
+9. Переключить сервер при включённом прокси → ядро перезапускается с новым сервером.
+10. Повторить 3–6 в Firefox.
+
+Smoke-тест хелпера с поддельным ядром: `pnpm --filter @vdp/helper smoke`.
