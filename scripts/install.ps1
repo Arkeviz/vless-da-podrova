@@ -20,7 +20,7 @@ $ErrorActionPreference = 'Stop'
 
 # --- Закреплённая версия ядра. Обновление = смена версии и хеша. ---
 $SingBoxVersion = '1.14.4'
-$SingBoxSha256 = ''  # SHA256 архива sing-box-$SingBoxVersion-windows-amd64.zip
+$SingBoxSha256 = '99185d75d314a07dbba4a130c8ad986cbeb629a07927975636b341ca61f991df'  # SHA256 архива sing-box-$SingBoxVersion-windows-amd64.zip
 
 $HostName = 'com.vless_da_podrova.helper'
 # ID расширения в Chromium вычисляется из `key` в packages/extension/wxt.config.ts.
