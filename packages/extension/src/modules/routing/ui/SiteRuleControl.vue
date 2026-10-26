@@ -2,14 +2,19 @@
 import { compileDomainRules, resolveBrowserRoute, ruleMatchKey, type BrowserAction } from '@vdp/shared'
 import { computed, ref, watch } from 'vue'
 import { ru } from '@/common/i18n/ru'
-import { useActiveSite } from '../composables/useActiveSite'
+import { useActiveTab } from '@/common/browser/useActiveTab'
 import { useRouting } from '../composables/useRouting'
 import { setSiteRule } from '../model/rules'
+
+const props = defineProps<{
+  /** Что сейчас важнее правил (например, режим вкладки) — показывается вместо итога правил. */
+  override?: string | null
+}>()
 
 type Scope = { type: 'suffix' | 'exact'; value: string }
 type Choice = BrowserAction | 'rules'
 
-const { site } = useActiveSite()
+const { tab: site } = useActiveTab()
 const { browserRules } = useRouting()
 
 const scopes = computed<{ scope: Scope; label: string }[]>(() => {
@@ -39,6 +44,7 @@ const scope = computed(() => scopes.value[scopeIndex.value]?.scope ?? null)
 const choice = computed<Choice>(() => (scope.value ? (ruleByKey.value.get(ruleMatchKey(scope.value)) ?? 'rules') : 'rules'))
 
 const effective = computed(() => {
+  if (props.override) return props.override
   if (!site.value) return null
   const route = resolveBrowserRoute(site.value.host, compileDomainRules(browserRules.value))
   return route === 'auto' ? ru.routing.site.effective.auto : ru.routing.site.effective[route]

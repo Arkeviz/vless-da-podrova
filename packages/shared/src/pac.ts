@@ -31,9 +31,33 @@ export function isBypassedHost(rawHost: string): boolean {
 
 export type BrowserRoute = 'direct' | 'proxy' | 'auto'
 
-/** Куда браузер отправляет запрос: мимо ядра, во вход `proxy` или во вход `auto`. */
-export function resolveBrowserRoute(host: string, table: DomainRuleTable): BrowserRoute {
+/** Набор доменов, совпадающих вместе с поддоменами. Ключи — домены, значения — true (для PAC). */
+export type DomainSet = Record<string, true>
+
+export function toDomainSet(domains: Iterable<string>): DomainSet {
+  const set: DomainSet = {}
+  for (const domain of domains) set[domain] = true
+  return set
+}
+
+/** Совпадает ли хост или один из его родительских доменов с набором. Самодостаточна — для PAC. */
+export function matchDomainSet(rawHost: string, set: DomainSet): boolean {
+  var candidate = rawHost.toLowerCase().replace(/\.$/, '')
+  while (true) {
+    if (Object.prototype.hasOwnProperty.call(set, candidate)) return true
+    var dot = candidate.indexOf('.')
+    if (dot === -1) return false
+    candidate = candidate.slice(dot + 1)
+  }
+}
+
+/**
+ * Куда браузер отправляет запрос: мимо ядра, во вход `proxy` или во вход `auto`.
+ * `forcedProxy` — домены режима «вкладка через прокси» (Chromium): важнее любых правил.
+ */
+export function resolveBrowserRoute(host: string, table: DomainRuleTable, forcedProxy: DomainSet = {}): BrowserRoute {
   if (isBypassedHost(host)) return 'direct'
+  if (matchDomainSet(host, forcedProxy)) return 'proxy'
   return matchDomainRules(host, table) ?? 'auto'
 }
 
@@ -43,19 +67,24 @@ export interface PacInput {
   /** Порт входа `proxy` ядра: всегда VLESS. */
   proxyPort: number
   domainRules: DomainRuleTable
+  forcedProxy?: DomainSet
 }
 
-export function buildPacScript({ autoPort, proxyPort, domainRules }: PacInput): string {
+export function buildPacScript({ autoPort, proxyPort, domainRules, forcedProxy = {} }: PacInput): string {
+  const proxy = `'SOCKS5 127.0.0.1:${proxyPort}'`
   // SOCKS5 в Chrome передаёт прокси имя хоста — DNS резолвится на стороне ядра.
   return [
     `var isBypassedHost = ${isBypassedHost.toString()};`,
+    `var matchDomainSet = ${matchDomainSet.toString()};`,
     `var matchDomainRules = ${matchDomainRules.toString()};`,
+    `var FORCED = ${JSON.stringify(forcedProxy)};`,
     `var RULES = ${JSON.stringify(domainRules)};`,
     'function FindProxyForURL(url, host) {',
     "  if (isBypassedHost(host)) return 'DIRECT';",
+    `  if (matchDomainSet(host, FORCED)) return ${proxy};`,
     '  var action = matchDomainRules(host, RULES);',
     "  if (action === 'direct') return 'DIRECT';",
-    `  if (action === 'proxy') return 'SOCKS5 127.0.0.1:${proxyPort}';`,
+    `  if (action === 'proxy') return ${proxy};`,
     `  return 'SOCKS5 127.0.0.1:${autoPort}';`,
     '}',
   ].join('\n')

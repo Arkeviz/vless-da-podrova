@@ -1,13 +1,19 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { browser } from 'wxt/browser'
 import { ru } from '@/common/i18n/ru'
-import { ConnectionPanel } from '@/modules/connection'
+import { ConnectionPanel, useConnection } from '@/modules/connection'
 import { TrafficBar, useLatency } from '@/modules/diagnostics'
 import { SiteRuleControl } from '@/modules/routing'
 import { ServersSection, useServers } from '@/modules/servers'
+import { TabModeToggle, useActiveTabMode } from '@/modules/tab-mode'
 
 const { hasSelection } = useServers()
 const { latency, canTest, testAll } = useLatency()
+const { status } = useConnection()
+const proxyOn = computed(() => status.value.state === 'on')
+const { enabled: tabModeOn } = useActiveTabMode()
+const siteOverride = computed(() => (tabModeOn.value ? ru.routing.site.overriddenByTabMode : null))
 
 function openOptions() {
   void browser.runtime.openOptionsPage()
@@ -22,7 +28,8 @@ function openOptions() {
     </header>
     <ConnectionPanel :can-enable="hasSelection" />
     <TrafficBar />
-    <SiteRuleControl />
+    <TabModeToggle :proxy-on="proxyOn" />
+    <SiteRuleControl :override="siteOverride" />
     <ServersSection :latency="latency" :can-test-latency="canTest !== null" @test-latency="testAll" />
   </main>
 </template>

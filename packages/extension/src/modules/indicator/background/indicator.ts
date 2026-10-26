@@ -3,20 +3,27 @@ import {
   ICON_COLORS,
   renderIcon,
   resolveBrowserRoute,
+  toDomainSet,
   type DomainRuleTable,
+  type DomainSet,
   type IconState,
 } from '@vdp/shared'
 import { browser } from 'wxt/browser'
 import { ru } from '@/common/i18n/ru'
 import { connectionStatusItem, type ConnectionStatus } from '@/modules/connection'
 import { getRoutingSnapshot, watchRouting, type RoutingSnapshot } from '@/modules/routing'
+import { getTabModeState, watchTabMode } from '@/modules/tab-mode'
 
 const ICON_SIZES = [16, 32] as const
-const BADGE_COLORS = { proxy: '#2f6fde', direct: '#6a7280' } as const
+const BADGE = {
+  proxy: { text: 'P', color: '#2f6fde' },
+  direct: { text: 'D', color: '#6a7280' },
+  tab: { text: 'T', color: '#8a4fd8' },
+} as const
 
 type Tab = { id?: number; url?: string }
-/** «core» — решают правила ядра, браузер заранее этого не знает. */
-type Verdict = 'proxy' | 'direct' | 'core'
+/** «core» — решают правила ядра, браузер заранее этого не знает; «tab» — режим вкладки. */
+type Verdict = 'proxy' | 'direct' | 'core' | 'tab'
 
 // MV3 — action, Firefox MV2 — browserAction.
 const action =
@@ -35,7 +42,12 @@ function iconFor(state: IconState): Record<number, ImageData> {
   return images
 }
 
-function verdictFor(url: string | undefined, routing: RoutingSnapshot, table: DomainRuleTable): Verdict | null {
+function verdictFor(
+  url: string | undefined,
+  routing: RoutingSnapshot,
+  table: DomainRuleTable,
+  forced: DomainSet,
+): Verdict | null {
   if (!url) return null
   let parsed: URL
   try {
@@ -45,7 +57,7 @@ function verdictFor(url: string | undefined, routing: RoutingSnapshot, table: Do
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
 
-  const route = resolveBrowserRoute(parsed.hostname, table)
+  const route = resolveBrowserRoute(parsed.hostname, table, forced)
   if (route !== 'auto') return route
   // Без правил ядра всё решает действие по умолчанию.
   return routing.coreRules.length ? 'core' : routing.defaultAction
@@ -55,11 +67,17 @@ class Indicator {
   private status: ConnectionStatus = { state: 'off' }
   private routing: RoutingSnapshot | null = null
   private table: DomainRuleTable = compileDomainRules([])
+  private tabModeTabs = new Set<number>()
+  /** Chromium: домены режима вкладки проксируются во всех вкладках. */
+  private forced: DomainSet = {}
 
   async refreshAll(): Promise<void> {
     this.status = await connectionStatusItem.getValue()
     this.routing = await getRoutingSnapshot()
     this.table = compileDomainRules(this.routing.browserRules)
+    const tabMode = await getTabModeState()
+    this.tabModeTabs = new Set(tabMode.tabIds)
+    this.forced = import.meta.env.FIREFOX ? {} : toDomainSet(tabMode.forcedDomains)
 
     await action.setIcon({ imageData: iconFor(this.status.state) })
     for (const tab of await browser.tabs.query({})) await this.refreshTab(tab)
@@ -67,18 +85,21 @@ class Indicator {
 
   async refreshTab(tab: Tab): Promise<void> {
     if (tab.id === undefined || !this.routing) return
-    const verdict = this.status.state === 'on' ? verdictFor(tab.url, this.routing, this.table) : null
+    const on = this.status.state === 'on'
+    const verdict: Verdict | null = !on
+      ? null
+      : this.tabModeTabs.has(tab.id)
+        ? 'tab'
+        : verdictFor(tab.url, this.routing, this.table, this.forced)
 
-    const text = verdict === 'proxy' ? 'P' : verdict === 'direct' ? 'D' : ''
+    const badge = verdict && verdict !== 'core' ? BADGE[verdict] : null
     const title = verdict
       ? `${ru.appName} — ${ru.indicator.verdict[verdict]}`
       : `${ru.appName} — ${ru.connection.state[this.status.state]}`
 
     try {
-      await action.setBadgeText({ tabId: tab.id, text })
-      if (verdict === 'proxy' || verdict === 'direct') {
-        await action.setBadgeBackgroundColor({ tabId: tab.id, color: BADGE_COLORS[verdict] })
-      }
+      await action.setBadgeText({ tabId: tab.id, text: badge?.text ?? '' })
+      if (badge) await action.setBadgeBackgroundColor({ tabId: tab.id, color: badge.color })
       await action.setTitle({ tabId: tab.id, title })
     } catch {
       // Вкладку успели закрыть.
@@ -96,6 +117,7 @@ export function startIndicator(): void {
 
   connectionStatusItem.watch(() => enqueue(() => indicator.refreshAll()))
   watchRouting(() => enqueue(() => indicator.refreshAll()))
+  watchTabMode(() => enqueue(() => indicator.refreshAll()))
   browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (changeInfo.url || changeInfo.status === 'loading') enqueue(() => indicator.refreshTab(tab))
   })

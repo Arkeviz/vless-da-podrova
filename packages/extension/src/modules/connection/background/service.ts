@@ -14,6 +14,7 @@ import { browser } from 'wxt/browser'
 import { ru } from '@/common/i18n/ru'
 import { getRoutingSnapshot, watchRouting, type RoutingSnapshot } from '@/modules/routing'
 import { getServerPool, serverTag, watchServers, type ServerPool } from '@/modules/servers'
+import { getTabModeState, watchTabMode } from '@/modules/tab-mode'
 import {
   connectionStatusItem,
   CORE_LOG_MESSAGE,
@@ -22,14 +23,20 @@ import {
   RECONNECT_MESSAGE,
 } from '../model/storage'
 import { HelperClient } from './helper-client'
-import { applyProxy, clearProxy, installFirefoxProxyListener } from './proxy'
+import {
+  applyProxy,
+  browserProxyKey,
+  clearProxy,
+  installFirefoxProxyListener,
+  type BrowserProxyState,
+} from './proxy'
 
 const CORE_LOG_LINES = 300
 
 interface Running {
   /** Всё, что попадает в конфиг ядра: при изменении ядро перезапускается. */
   coreKey: string
-  /** Доменные правила браузера: при изменении меняется только PAC / onRequest. */
+  /** Доменные правила браузера и режим вкладки: при изменении меняется только PAC / onRequest. */
   browserKey: string
   /** Выбранный сервер в ручном режиме: меняется через Clash API без перезапуска. */
   selectedTag: string | null
@@ -82,14 +89,18 @@ class ConnectionService {
     }
 
     const routing = await getRoutingSnapshot()
+    const browserState: BrowserProxyState = {
+      domainRules: compileDomainRules(routing.browserRules),
+      tabMode: await getTabModeState(),
+    }
     const servers: CoreServer[] = pool.servers.map((s) => ({ tag: serverTag(s.id), server: s.server }))
     const selectedTag = pool.mode === 'manual' ? serverTag(pool.selected.id) : null
     const coreKey = JSON.stringify([servers, pool.mode, routing.coreRules, routing.defaultAction])
-    const browserKey = JSON.stringify(routing.browserRules)
+    const browserKey = browserProxyKey(browserState)
 
     const running = this.running
     if (force || running?.coreKey !== coreKey) {
-      await this.connect(pool, servers, routing, { coreKey, browserKey, selectedTag })
+      await this.connect(pool, servers, routing, browserState, { coreKey, browserKey, selectedTag })
       return
     }
 
@@ -107,12 +118,12 @@ class ConnectionService {
         }
       }
       if (running.browserKey !== browserKey) {
-        await applyProxy(running.ports, compileDomainRules(routing.browserRules))
+        await applyProxy(running.ports, browserState)
         running.browserKey = browserKey
       }
     } catch (error) {
       console.warn('[connection] не удалось применить изменения на лету, перезапуск ядра', error)
-      await this.connect(pool, servers, routing, { coreKey, browserKey, selectedTag })
+      await this.connect(pool, servers, routing, browserState, { coreKey, browserKey, selectedTag })
     }
   }
 
@@ -120,6 +131,7 @@ class ConnectionService {
     pool: ServerPool,
     servers: CoreServer[],
     routing: RoutingSnapshot,
+    browserState: BrowserProxyState,
     keys: Pick<Running, 'coreKey' | 'browserKey' | 'selectedTag'>,
   ): Promise<void> {
     const serverName = pool.mode === 'manual' ? pool.selected.server.name : ru.servers.autoName
@@ -148,7 +160,7 @@ class ConnectionService {
         cacheFilePath: `cache-${await instanceIdItem.getValue()}.db`,
       })
       await helper.call('start', { config, readinessPort: ports.auto })
-      await applyProxy(ports, compileDomainRules(routing.browserRules))
+      await applyProxy(ports, browserState)
 
       this.running = { ...keys, ports, clashApiSecret }
       await connectionStatusItem.setValue({
@@ -217,6 +229,7 @@ export function startConnectionService(): void {
   proxyEnabledItem.watch(() => service.reconcile())
   watchServers(() => service.reconcile())
   watchRouting(() => service.reconcile())
+  watchTabMode(() => service.reconcile())
   browser.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
     const type = (message as { type?: unknown })?.type
     if (type === RECONNECT_MESSAGE) service.reconcile(true)

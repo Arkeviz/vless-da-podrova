@@ -3,6 +3,7 @@ import { ru } from '@/common/i18n/ru'
 import { DiagnosticsPanel } from '@/modules/diagnostics'
 import { RulesEditor } from '@/modules/routing'
 import { SubscriptionsSection } from '@/modules/servers'
+import { TabModeSettings } from '@/modules/tab-mode'
 </script>
 
 <template>
@@ -17,6 +18,11 @@ import { SubscriptionsSection } from '@/modules/servers'
     <section class="options__section">
       <h2 class="options__heading">{{ ru.options.rules }}</h2>
       <RulesEditor />
+    </section>
+
+    <section class="options__section">
+      <h2 class="options__heading">{{ ru.options.tabMode }}</h2>
+      <TabModeSettings />
     </section>
 
     <section class="options__section">

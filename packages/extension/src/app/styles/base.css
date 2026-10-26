@@ -14,6 +14,8 @@
   --warn: #d48806;
   --danger: #d1343a;
   --danger-bg: #fdecec;
+  --tab-mode: #8a4fd8;
+  --tab-mode-bg: #f4eefd;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,6 +31,8 @@
     --warn: #f0b03c;
     --danger: #ff6b70;
     --danger-bg: #3a1f22;
+    --tab-mode: #a77bf0;
+    --tab-mode-bg: #2a2238;
   }
 }
 

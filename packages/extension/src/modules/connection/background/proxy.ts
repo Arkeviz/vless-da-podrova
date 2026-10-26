@@ -4,26 +4,62 @@
  */
 import {
   buildPacScript,
+  isBypassedHost,
+  matchDomainSet,
   resolveBrowserRoute,
+  toDomainSet,
   type CorePorts,
   type DomainRuleTable,
 } from '@vdp/shared'
 import { browser } from 'wxt/browser'
 import { ru } from '@/common/i18n/ru'
+import { setTabMode, type TabModeState } from '@/modules/tab-mode'
 
-let firefoxState: { ports: CorePorts; domainRules: DomainRuleTable } | null = null
+export interface BrowserProxyState {
+  domainRules: DomainRuleTable
+  tabMode: TabModeState
+}
+
+interface FirefoxState {
+  ports: CorePorts
+  domainRules: DomainRuleTable
+  tabIds: Set<number>
+  alwaysSites: TabModeState['alwaysSites']
+}
+
+let firefoxState: FirefoxState | null = null
+
+/** Что из состояния влияет на браузерную часть — при изменении прокси переприменяется. */
+export function browserProxyKey(state: BrowserProxyState): string {
+  const { domainRules, tabMode } = state
+  return import.meta.env.FIREFOX
+    ? JSON.stringify([domainRules, tabMode.tabIds, tabMode.alwaysSites])
+    : JSON.stringify([domainRules, tabMode.forcedDomains])
+}
 
 /** Firefox: слушатель регистрируется синхронно при старте фона, пока портов нет — всё напрямую. */
 export function installFirefoxProxyListener(): void {
   const proxy = (browser as unknown as { proxy: FirefoxProxyApi }).proxy
   proxy.onRequest.addListener(
     (details) => {
-      if (!firefoxState) return { type: 'direct' }
-      const { ports, domainRules } = firefoxState
-      const route = resolveBrowserRoute(new URL(details.url).hostname, domainRules)
+      const state = firefoxState
+      if (!state) return { type: 'direct' }
+      const host = new URL(details.url).hostname
+      if (isBypassedHost(host)) return { type: 'direct' }
+
+      // Режим вкладки: точно по tabId, важнее любых правил.
+      let inTabMode = state.tabIds.has(details.tabId)
+      if (!inTabMode && details.type === 'main_frame' && matchDomainSet(host, state.alwaysSites)) {
+        // «Всегда для сайта»: включаем режим до первого запроса страницы, не дожидаясь фона.
+        state.tabIds.add(details.tabId)
+        void setTabMode(details.tabId, true)
+        inTabMode = true
+      }
+
+      const route = inTabMode ? 'proxy' : resolveBrowserRoute(host, state.domainRules)
       if (route === 'direct') return { type: 'direct' }
       // proxyDNS: имя хоста резолвит ядро, а не системный DNS.
-      const port = route === 'proxy' ? ports.proxy : ports.auto
+      const port = route === 'proxy' ? state.ports.proxy : state.ports.auto
       return { type: 'socks', host: '127.0.0.1', port, proxyDNS: true }
     },
     { urls: ['<all_urls>'] },
@@ -31,9 +67,14 @@ export function installFirefoxProxyListener(): void {
   proxy.onError.addListener((error) => console.error('[proxy]', error.message))
 }
 
-export async function applyProxy(ports: CorePorts, domainRules: DomainRuleTable): Promise<void> {
+export async function applyProxy(ports: CorePorts, state: BrowserProxyState): Promise<void> {
   if (import.meta.env.FIREFOX) {
-    firefoxState = { ports, domainRules }
+    firefoxState = {
+      ports,
+      domainRules: state.domainRules,
+      tabIds: new Set(state.tabMode.tabIds),
+      alwaysSites: state.tabMode.alwaysSites,
+    }
     return
   }
 
@@ -45,7 +86,12 @@ export async function applyProxy(ports: CorePorts, domainRules: DomainRuleTable)
     value: {
       mode: 'pac_script',
       pacScript: {
-        data: buildPacScript({ autoPort: ports.auto, proxyPort: ports.proxy, domainRules }),
+        data: buildPacScript({
+          autoPort: ports.auto,
+          proxyPort: ports.proxy,
+          domainRules: state.domainRules,
+          forcedProxy: toDomainSet(state.tabMode.forcedDomains),
+        }),
       },
     },
     scope: 'regular',
@@ -67,7 +113,7 @@ type FirefoxProxyInfo =
 interface FirefoxProxyApi {
   onRequest: {
     addListener(
-      listener: (details: { url: string; tabId: number }) => FirefoxProxyInfo,
+      listener: (details: { url: string; tabId: number; type: string }) => FirefoxProxyInfo,
       filter: { urls: string[] },
     ): void
   }

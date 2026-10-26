@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPacScript, isBypassedHost, resolveBrowserRoute } from './pac'
+import { buildPacScript, isBypassedHost, matchDomainSet, resolveBrowserRoute, toDomainSet } from './pac'
 import { compileDomainRules } from './rules'
 
 const bypassed = [
@@ -54,5 +54,32 @@ describe('buildPacScript', () => {
     expect(resolveBrowserRoute('usher.twitch.tv', domainRules)).toBe('proxy')
     expect(resolveBrowserRoute('www.youtube.com', domainRules)).toBe('direct')
     expect(resolveBrowserRoute('ya.ru', domainRules)).toBe('auto')
+  })
+})
+
+describe('принудительный прокси (режим вкладки)', () => {
+  const domainRules = compileDomainRules([
+    { id: '1', match: { type: 'suffix', value: 'twitch.tv' }, action: 'direct' },
+  ])
+  const forcedProxy = toDomainSet(['twitch.tv', 'ttvnw.net', '7tv.app'])
+  const pac = buildPacScript({ autoPort: 1, proxyPort: 2, domainRules, forcedProxy })
+  const findProxy = new Function(`${pac}; return FindProxyForURL`)() as (url: string, host: string) => string
+
+  it.each([
+    ['usher.twitch.tv', 'proxy'],
+    ['video-edge-1.abs.hls.ttvnw.net', 'proxy'],
+    ['cdn.7tv.app', 'proxy'],
+    ['localhost', 'direct'],
+    ['ya.ru', 'auto'],
+    ['nottwitch.tv', 'auto'],
+  ] as const)('%s → %s, важнее правил браузера', (host, route) => {
+    expect(resolveBrowserRoute(host, domainRules, forcedProxy)).toBe(route)
+    expect(findProxy(`https://${host}/`, host)).toBe({ direct: 'DIRECT', proxy: 'SOCKS5 127.0.0.1:2', auto: 'SOCKS5 127.0.0.1:1' }[route])
+  })
+
+  it('matchDomainSet совпадает с самим доменом и поддоменами', () => {
+    expect(matchDomainSet('TWITCH.TV.', forcedProxy)).toBe(true)
+    expect(matchDomainSet('a.b.twitch.tv', forcedProxy)).toBe(true)
+    expect(matchDomainSet('tv', forcedProxy)).toBe(false)
   })
 })

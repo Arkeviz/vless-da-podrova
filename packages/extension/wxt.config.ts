@@ -34,14 +34,16 @@ export default defineConfig({
       'tabs',
       // Firefox (MV2): proxy.onRequest видит только запросы к разрешённым хостам;
       // заодно это доступ к подпискам и к Clash API ядра.
-      ...(browser === 'firefox' ? ['<all_urls>'] : []),
+      // Chromium: неблокирующий webRequest — обучение доменам в режиме вкладки.
+      ...(browser === 'firefox' ? ['<all_urls>'] : ['webRequest']),
     ],
     ...(browser === 'firefox'
       ? {}
       : {
           // Clash API ядра на localhost.
           host_permissions: ['http://127.0.0.1/*'],
-          // Доступ к адресам подписок запрашивается при добавлении подписки.
+          // Доступ к адресам подписок — при добавлении подписки, ко всем сайтам —
+          // при первом включении режима вкладки (иначе webRequest не видит запросы).
           optional_host_permissions: ['https://*/*', 'http://*/*'],
         }),
     ...(browser === 'firefox'
