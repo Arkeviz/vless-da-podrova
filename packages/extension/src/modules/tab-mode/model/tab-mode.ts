@@ -25,12 +25,25 @@ export async function getTabModeState(): Promise<TabModeState> {
     alwaysSitesItem.getValue(),
     learnedDomainsItem.getValue(),
   ])
+  return {
+    tabIds,
+    alwaysSites: toDomainSet(alwaysSites),
+    forcedDomains: computeForcedDomains(activeSites, alwaysSites, learned),
+  }
+}
+
+/** Сайты вкладок в режиме и сайты «всегда» вместе с выученными для них доменами. */
+export function computeForcedDomains(
+  activeSites: readonly string[],
+  alwaysSites: readonly string[],
+  learned: Readonly<Record<string, readonly string[]>>,
+): string[] {
   const forced = new Set<string>()
   for (const site of [...activeSites, ...alwaysSites]) {
     forced.add(site)
     for (const domain of learned[site] ?? []) forced.add(domain)
   }
-  return { tabIds, alwaysSites: toDomainSet(alwaysSites), forcedDomains: [...forced].sort() }
+  return [...forced].sort()
 }
 
 export function watchTabMode(callback: () => void): () => void {

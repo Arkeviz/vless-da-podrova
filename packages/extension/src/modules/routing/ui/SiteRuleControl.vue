@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { compileDomainRules, resolveBrowserRoute, ruleMatchKey, type BrowserAction } from '@vdp/shared'
+import { browserVerdict, compileDomainRules, ruleMatchKey, type BrowserAction } from '@vdp/shared'
 import { computed, ref, watch } from 'vue'
 import { ru } from '@/common/i18n/ru'
 import { useActiveTab } from '@/common/browser/useActiveTab'
@@ -15,7 +15,7 @@ type Scope = { type: 'suffix' | 'exact'; value: string }
 type Choice = BrowserAction | 'rules'
 
 const { tab: site } = useActiveTab()
-const { browserRules } = useRouting()
+const { browserRules, coreRules, defaultAction } = useRouting()
 
 const scopes = computed<{ scope: Scope; label: string }[]>(() => {
   if (!site.value) return []
@@ -46,8 +46,12 @@ const choice = computed<Choice>(() => (scope.value ? (ruleByKey.value.get(ruleMa
 const effective = computed(() => {
   if (props.override) return props.override
   if (!site.value) return null
-  const route = resolveBrowserRoute(site.value.host, compileDomainRules(browserRules.value))
-  return route === 'auto' ? ru.routing.site.effective.auto : ru.routing.site.effective[route]
+  const verdict = browserVerdict(site.value.host, {
+    domainRules: compileDomainRules(browserRules.value),
+    hasCoreRules: coreRules.value.length > 0,
+    defaultAction: defaultAction.value,
+  })
+  return verdict === 'core' ? ru.routing.site.effective.auto : ru.routing.site.effective[verdict]
 })
 
 const choices: { value: Choice; label: string }[] = [

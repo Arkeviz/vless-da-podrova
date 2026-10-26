@@ -1,8 +1,8 @@
 import {
+  browserVerdict,
   compileDomainRules,
   ICON_COLORS,
   renderIcon,
-  resolveBrowserRoute,
   toDomainSet,
   type DomainRuleTable,
   type DomainSet,
@@ -57,10 +57,12 @@ function verdictFor(
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
 
-  const route = resolveBrowserRoute(parsed.hostname, table, forced)
-  if (route !== 'auto') return route
-  // Без правил ядра всё решает действие по умолчанию.
-  return routing.coreRules.length ? 'core' : routing.defaultAction
+  return browserVerdict(parsed.hostname, {
+    domainRules: table,
+    forcedProxy: forced,
+    hasCoreRules: routing.coreRules.length > 0,
+    defaultAction: routing.defaultAction,
+  })
 }
 
 class Indicator {

@@ -5,7 +5,8 @@
  */
 import { browserRulesItem, coreRulesItem, defaultActionItem } from './model/storage'
 export type { RoutingSnapshot } from './model/rules'
-export { addRule, getRoutingSnapshot, watchRouting } from './model/rules'
+export { addRule, getRoutingSnapshot, setSiteRule, watchRouting } from './model/rules'
+export { useRouting } from './composables/useRouting'
 export { default as SiteRuleControl } from './ui/SiteRuleControl.vue'
 export { default as RulesEditor } from './ui/RulesEditor.vue'
 

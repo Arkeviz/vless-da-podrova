@@ -117,3 +117,20 @@ export function buildKillSwitchPacScript(): string {
     '}',
   ].join('\n')
 }
+
+/** Как пойдёт запрос к хосту: «core» — решают правила ядра, браузер заранее не знает. */
+export type BrowserVerdict = 'proxy' | 'direct' | 'core'
+
+export interface VerdictContext {
+  domainRules: DomainRuleTable
+  forcedProxy?: DomainSet
+  /** Есть ли правила ядра: без них всё, что не решил браузер, идёт по действию по умолчанию. */
+  hasCoreRules: boolean
+  defaultAction: 'proxy' | 'direct'
+}
+
+export function browserVerdict(host: string, context: VerdictContext): BrowserVerdict {
+  const route = resolveBrowserRoute(host, context.domainRules, context.forcedProxy)
+  if (route !== 'auto') return route
+  return context.hasCoreRules ? 'core' : context.defaultAction
+}

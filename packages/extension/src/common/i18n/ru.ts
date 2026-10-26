@@ -153,6 +153,22 @@ export const ru = {
     ignoreAdd: 'Добавить',
     remove: 'Убрать',
   },
+  tabDomains: {
+    title: 'Домены вкладки',
+    count: (sites: number, hosts: number) => `${sites} сайтов · ${hosts} хостов`,
+    hosts: (count: number) => `хостов: ${count}`,
+    needAccess: 'Чтобы видеть, к каким доменам обращается вкладка, нужен доступ к сайтам.',
+    grant: 'Разрешить',
+    empty: 'Запросы вкладки появятся после загрузки страницы.',
+    ruleTitle: 'Правило для домена и поддоменов',
+    verdict: {
+      proxy: 'прокси',
+      direct: 'напрямую',
+      core: 'ядро',
+      tab: 'вкладка',
+      mixed: 'по-разному',
+    },
+  },
   settings: {
     title: 'Защита и сеть',
     flags: {

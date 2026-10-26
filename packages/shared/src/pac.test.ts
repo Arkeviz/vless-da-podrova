@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  browserVerdict,
   buildKillSwitchPacScript,
   buildPacScript,
   isBypassedHost,
@@ -108,5 +109,18 @@ describe('настройки PAC', () => {
     ) => string
     expect(findProxy('https://ya.ru/', 'ya.ru')).toBe(`SOCKS5 127.0.0.1:${KILL_SWITCH_PORT}`)
     expect(findProxy('http://192.168.1.1/', '192.168.1.1')).toBe('DIRECT')
+  })
+})
+
+describe('browserVerdict', () => {
+  const domainRules = compileDomainRules([{ id: '1', match: { type: 'suffix', value: 'ya.ru' }, action: 'direct' }])
+
+  it.each([
+    ['ya.ru', false, 'direct'],
+    ['twitch.tv', false, 'proxy'],
+    ['twitch.tv', true, 'core'],
+    ['localhost', true, 'direct'],
+  ] as const)('%s, правила ядра: %s → %s', (host, hasCoreRules, expected) => {
+    expect(browserVerdict(host, { domainRules, hasCoreRules, defaultAction: 'proxy' })).toBe(expected)
   })
 })

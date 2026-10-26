@@ -9,6 +9,7 @@ export type { TabModeState } from './model/tab-mode'
 export { getTabModeState, setTabMode, watchTabMode } from './model/tab-mode'
 export { startTabMode } from './background/controller'
 export { useActiveTabMode } from './composables/useActiveTabMode'
+export { useTabMode } from './composables/useTabMode'
 export { default as TabModeToggle } from './ui/TabModeToggle.vue'
 export { default as TabModeSettings } from './ui/TabModeSettings.vue'
 
