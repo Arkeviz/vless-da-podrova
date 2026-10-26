@@ -1,3 +1,5 @@
+import { matchDomainRules, type DomainRuleTable } from './rules'
+
 /**
  * Решение «мимо прокси» для localhost и локальной сети.
  * Функция самодостаточна (без внешних ссылок): её исходник встраивается в PAC-скрипт.
@@ -27,17 +29,33 @@ export function isBypassedHost(rawHost: string): boolean {
   return false
 }
 
-export interface PacInput {
-  /** Порт входа `auto` ядра. */
-  autoPort: number
+export type BrowserRoute = 'direct' | 'proxy' | 'auto'
+
+/** Куда браузер отправляет запрос: мимо ядра, во вход `proxy` или во вход `auto`. */
+export function resolveBrowserRoute(host: string, table: DomainRuleTable): BrowserRoute {
+  if (isBypassedHost(host)) return 'direct'
+  return matchDomainRules(host, table) ?? 'auto'
 }
 
-export function buildPacScript({ autoPort }: PacInput): string {
+export interface PacInput {
+  /** Порт входа `auto` ядра: трафик идёт через правила ядра. */
+  autoPort: number
+  /** Порт входа `proxy` ядра: всегда VLESS. */
+  proxyPort: number
+  domainRules: DomainRuleTable
+}
+
+export function buildPacScript({ autoPort, proxyPort, domainRules }: PacInput): string {
   // SOCKS5 в Chrome передаёт прокси имя хоста — DNS резолвится на стороне ядра.
   return [
     `var isBypassedHost = ${isBypassedHost.toString()};`,
+    `var matchDomainRules = ${matchDomainRules.toString()};`,
+    `var RULES = ${JSON.stringify(domainRules)};`,
     'function FindProxyForURL(url, host) {',
     "  if (isBypassedHost(host)) return 'DIRECT';",
+    '  var action = matchDomainRules(host, RULES);',
+    "  if (action === 'direct') return 'DIRECT';",
+    `  if (action === 'proxy') return 'SOCKS5 127.0.0.1:${proxyPort}';`,
     `  return 'SOCKS5 127.0.0.1:${autoPort}';`,
     '}',
   ].join('\n')

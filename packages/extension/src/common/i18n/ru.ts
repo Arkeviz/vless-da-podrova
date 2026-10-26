@@ -24,6 +24,64 @@ export const ru = {
     added: (count: number) => `Добавлено серверов: ${count}`,
     duplicate: 'Такой сервер уже есть',
   },
+  routing: {
+    action: {
+      proxy: 'Через прокси',
+      direct: 'Напрямую',
+      block: 'Блокировать',
+    },
+    matchType: {
+      exact: 'Домен',
+      suffix: 'Домен и поддомены',
+      keyword: 'Ключевое слово в домене',
+      ip: 'IP / CIDR',
+      ruleSet: 'Rule-set по URL',
+    },
+    placeholder: {
+      exact: 'music.youtube.com',
+      suffix: 'youtube.com',
+      keyword: 'twitch',
+      ip: '91.108.4.0/22',
+      ruleSet: 'https://example.com/list.srs',
+    },
+    format: {
+      auto: 'Формат по расширению',
+      binary: 'Бинарный (.srs)',
+      source: 'Исходный (.json)',
+    },
+    updateEvery: (hours: number) => `обновление раз в ${hours} ч`,
+    updateHours: 'Обновлять, ч',
+    add: 'Добавить правило',
+    remove: 'Удалить',
+    moveUp: 'Выше',
+    moveDown: 'Ниже',
+    dragHint: 'Перетащите, чтобы изменить порядок',
+    defaultTitle: 'Если ни одно правило не подошло',
+    browserTitle: 'Правила браузера',
+    browserHint:
+      'Домены «через прокси» и «напрямую». Срабатывают мгновенно и важнее правил ядра.',
+    coreTitle: 'Правила ядра',
+    coreHint:
+      'Блокировка, IP и rule-set’ы. Проверяются по порядку, срабатывает первое совпадение. Изменения перезапускают ядро.',
+    emptyList: 'Правил нет',
+    site: {
+      title: 'Этот сайт',
+      scopeDomain: (domain: string) => `${domain} и поддомены`,
+      scopeHost: (host: string) => `только ${host}`,
+      byRules: 'По правилам',
+      now: 'Сейчас',
+      effective: {
+        proxy: 'через прокси',
+        direct: 'напрямую',
+        auto: 'по правилам ядра',
+      },
+      unavailable: 'Для этой страницы правила не применяются',
+    },
+  },
+  options: {
+    title: 'Настройки vless-da-podrova',
+    open: 'Настройки',
+  },
   errors: {
     helperNotInstalled:
       'Хелпер не установлен или не зарегистрирован. Запустите scripts\install.ps1 и перезапустите браузер.',

@@ -1,5 +1,6 @@
 import {
   buildSingboxConfig,
+  compileDomainRules,
   CORE_PORT_COUNT,
   DEFAULT_DOH_URL,
   PROTOCOL_VERSION,
@@ -8,19 +9,32 @@ import {
 } from '@vdp/shared'
 import { browser } from 'wxt/browser'
 import { ru } from '@/common/i18n/ru'
+import { getRoutingSnapshot, watchRouting, type RoutingSnapshot } from '@/modules/routing'
 import { getSelectedServer, watchSelectedServer, type StoredServer } from '@/modules/servers'
-import { connectionStatusItem, proxyEnabledItem, RECONNECT_MESSAGE } from '../model/storage'
+import {
+  connectionStatusItem,
+  instanceIdItem,
+  proxyEnabledItem,
+  RECONNECT_MESSAGE,
+} from '../model/storage'
 import { HelperClient } from './helper-client'
 import { applyProxy, clearProxy, installFirefoxProxyListener } from './proxy'
 
+interface Running {
+  /** Всё, что попадает в конфиг ядра: при изменении ядро перезапускается. */
+  coreKey: string
+  /** Доменные правила браузера: при изменении меняется только PAC / onRequest. */
+  browserKey: string
+  ports: CorePorts
+}
+
 /**
  * Приводит фактическое состояние (хелпер, ядро, настройки прокси) к желаемому
- * (proxyEnabled + выбранный сервер). Все переходы идут строго по очереди.
+ * (proxyEnabled, выбранный сервер, правила). Все переходы идут строго по очереди.
  */
 class ConnectionService {
   private helper: HelperClient | null = null
-  /** Конфиг сервера, с которым запущено ядро, — чтобы не перезапускать его без нужды. */
-  private runningServerKey: string | null = null
+  private running: Running | null = null
   private queue: Promise<void> = Promise.resolve()
 
   enqueue(task: () => Promise<void>): void {
@@ -49,13 +63,30 @@ class ConnectionService {
       return
     }
 
-    const serverKey = JSON.stringify(selected.server)
-    if (!force && this.runningServerKey === serverKey) return
+    const routing = await getRoutingSnapshot()
+    const coreKey = JSON.stringify([selected.server, routing.coreRules, routing.defaultAction])
+    const browserKey = JSON.stringify(routing.browserRules)
 
-    await this.connect(selected, serverKey)
+    if (force || this.running?.coreKey !== coreKey) {
+      await this.connect(selected, routing, { coreKey, browserKey })
+      return
+    }
+
+    if (this.running.browserKey !== browserKey) {
+      try {
+        await applyProxy(this.running.ports, compileDomainRules(routing.browserRules))
+        this.running.browserKey = browserKey
+      } catch (error) {
+        await this.fail((error as Error).message)
+      }
+    }
   }
 
-  private async connect(selected: StoredServer, serverKey: string): Promise<void> {
+  private async connect(
+    selected: StoredServer,
+    routing: RoutingSnapshot,
+    keys: Pick<Running, 'coreKey' | 'browserKey'>,
+  ): Promise<void> {
     const serverName = selected.server.name
     await connectionStatusItem.setValue({ state: 'connecting', serverName })
 
@@ -75,11 +106,14 @@ class ConnectionService {
         ports,
         clashApiSecret: randomSecret(),
         dohUrl: DEFAULT_DOH_URL,
+        rules: routing.coreRules,
+        defaultAction: routing.defaultAction,
+        cacheFilePath: `cache-${await instanceIdItem.getValue()}.db`,
       })
       await helper.call('start', { config, readinessPort: ports.auto })
-      await applyProxy(ports)
+      await applyProxy(ports, compileDomainRules(routing.browserRules))
 
-      this.runningServerKey = serverKey
+      this.running = { ...keys, ports }
       await connectionStatusItem.setValue({
         state: 'on',
         serverName,
@@ -118,7 +152,7 @@ class ConnectionService {
 
   private async shutdown(): Promise<void> {
     await clearProxy()
-    this.runningServerKey = null
+    this.running = null
 
     const helper = this.helper
     this.helper = null
@@ -143,6 +177,7 @@ export function startConnectionService(): void {
   const service = new ConnectionService()
   proxyEnabledItem.watch(() => service.reconcile())
   watchSelectedServer(() => service.reconcile())
+  watchRouting(() => service.reconcile())
   browser.runtime.onMessage.addListener((message: unknown) => {
     if ((message as { type?: unknown })?.type === RECONNECT_MESSAGE) service.reconcile(true)
   })

@@ -9,6 +9,17 @@ export default defineConfig({
   srcDir: 'src',
   entrypointsDir: 'app/entrypoints',
   modules: ['@wxt-dev/module-vue'],
+  vite: () => ({
+    build: {
+      rollupOptions: {
+        treeshake: {
+          // tldts не объявляет sideEffects: false, и без подсказки его таблица суффиксов
+          // попадает в фон, которому она не нужна (фон импортирует только модель правил).
+          moduleSideEffects: (id: string) => !/[\\/]tldts(-core)?[\\/]/.test(id),
+        },
+      },
+    },
+  }),
   manifest: ({ browser }) => ({
     name: 'vless-da-podrova',
     description: 'Трафик браузера через собственный VLESS-сервер',
@@ -16,6 +27,8 @@ export default defineConfig({
       'storage',
       'proxy',
       'nativeMessaging',
+      // URL активной вкладки для кнопки «этот сайт» — только когда открыт попап.
+      'activeTab',
       // Firefox (MV2): proxy.onRequest видит только запросы к разрешённым хостам.
       ...(browser === 'firefox' ? ['<all_urls>'] : []),
     ],

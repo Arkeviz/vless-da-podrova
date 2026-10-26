@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@vdp/shared": "workspace:*",
+    "tldts": "^7.4.19",
     "vue": "^3.5.44"
   },
   "devDependencies": {

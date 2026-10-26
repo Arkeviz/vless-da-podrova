@@ -4,3 +4,6 @@ packages:
 allowBuilds:
   bun: true
   esbuild: true
+
+minimumReleaseAgeExclude:
+  - wxt@0.21.5

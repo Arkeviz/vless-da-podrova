@@ -9,7 +9,8 @@ import {
 import { browser } from 'wxt/browser'
 import { ru } from '@/common/i18n/ru'
 
-const CALL_TIMEOUT_MS = 20_000
+// Больше, чем ожидание готовности ядра в хелпере (30 с).
+const CALL_TIMEOUT_MS = 45_000
 
 type Port = ReturnType<typeof browser.runtime.connectNative>
 

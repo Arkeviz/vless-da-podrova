@@ -6,7 +6,8 @@ import { canConnect } from './net'
 import { configPath, corePath, runDir } from './paths'
 
 const LOG_LIMIT = 500
-const READY_TIMEOUT_MS = 10_000
+// С rule-set'ами первый запуск ждёт их скачивания.
+const READY_TIMEOUT_MS = 30_000
 const READY_POLL_MS = 100
 const STOP_TIMEOUT_MS = 3_000
 

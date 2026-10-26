@@ -23,4 +23,9 @@ export const connectionStatusItem = storage.defineItem<ConnectionStatus>('local:
   fallback: { state: 'off' },
 })
 
+/** Случайный ID этой установки расширения: у каждого браузера свой файл кэша ядра. */
+export const instanceIdItem = storage.defineItem<string>('local:instanceId', {
+  init: () => crypto.randomUUID(),
+})
+
 export const RECONNECT_MESSAGE = 'connection:reconnect'

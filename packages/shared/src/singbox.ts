@@ -1,3 +1,4 @@
+import { isBrowserRule, type DefaultAction, type Rule } from './rules'
 import type { VlessServer } from './vless'
 
 export interface CorePorts {
@@ -17,6 +18,11 @@ export interface BuildConfigInput {
   ports: CorePorts
   clashApiSecret: string
   dohUrl: string
+  /** Правила, которые исполняет ядро, в порядке приоритета. Правила браузера отбрасываются. */
+  rules?: readonly Rule[]
+  defaultAction?: DefaultAction
+  /** Файл кэша rule-set'ов. Свой у каждого браузера: два ядра не могут делить один файл. */
+  cacheFilePath?: string
   logLevel?: CoreLogLevel
 }
 
@@ -34,7 +40,18 @@ export const TAG = {
 type Json = Record<string, unknown>
 
 export function buildSingboxConfig(input: BuildConfigInput): Json {
-  const { server, ports, clashApiSecret, dohUrl, logLevel = 'info' } = input
+  const {
+    server,
+    ports,
+    clashApiSecret,
+    dohUrl,
+    rules = [],
+    defaultAction = 'proxy',
+    cacheFilePath,
+    logLevel = 'info',
+  } = input
+  const coreRules = rules.filter((rule) => !isBrowserRule(rule))
+  const ruleSets = buildRuleSets(coreRules)
 
   return {
     log: { level: logLevel, timestamp: true },
@@ -45,8 +62,12 @@ export function buildSingboxConfig(input: BuildConfigInput): Json {
     ],
     outbounds: [buildVlessOutbound(server), { type: 'direct', tag: TAG.direct }],
     route: {
-      rules: [{ inbound: [TAG.inProxy], action: 'route', outbound: TAG.proxy }],
-      final: TAG.proxy,
+      rules: [
+        { inbound: [TAG.inProxy], action: 'route', outbound: TAG.proxy },
+        ...buildRouteRules(coreRules),
+      ],
+      ...(ruleSets.length ? { rule_set: ruleSets } : {}),
+      final: defaultAction === 'proxy' ? TAG.proxy : TAG.direct,
       default_domain_resolver: TAG.dns,
     },
     experimental: {
@@ -54,8 +75,67 @@ export function buildSingboxConfig(input: BuildConfigInput): Json {
         external_controller: `127.0.0.1:${ports.clashApi}`,
         secret: clashApiSecret,
       },
+      ...(ruleSets.length && cacheFilePath
+        ? { cache_file: { enabled: true, path: cacheFilePath } }
+        : {}),
     },
   }
+}
+
+export function ruleSetTag(rule: Rule): string {
+  return `rs-${rule.id}`
+}
+
+function buildRouteRules(rules: readonly Rule[]): Json[] {
+  const result: Json[] = []
+  let resolved = false
+
+  for (const rule of rules) {
+    const { match } = rule
+    // IP-условиям нужен адрес, а браузер присылает домен — резолвим один раз,
+    // прямо перед первым правилом, которому он нужен (rule-set может содержать IP).
+    if (!resolved && (match.type === 'ip' || match.type === 'ruleSet')) {
+      result.push({ action: 'resolve' })
+      resolved = true
+    }
+
+    const condition: Json =
+      match.type === 'exact'
+        ? { domain: [match.value] }
+        : match.type === 'suffix'
+          ? { domain_suffix: [match.value] }
+          : match.type === 'keyword'
+            ? { domain_keyword: [match.value] }
+            : match.type === 'ip'
+              ? { ip_cidr: [match.value] }
+              : { rule_set: [ruleSetTag(rule)] }
+
+    const action: Json =
+      rule.action === 'block'
+        ? { action: 'reject' }
+        : { action: 'route', outbound: rule.action === 'proxy' ? TAG.proxy : TAG.direct }
+
+    result.push({ ...condition, ...action })
+  }
+  return result
+}
+
+function buildRuleSets(rules: readonly Rule[]): Json[] {
+  return rules.flatMap((rule) =>
+    rule.match.type === 'ruleSet'
+      ? [
+          {
+            type: 'remote',
+            tag: ruleSetTag(rule),
+            format: rule.match.format,
+            url: rule.match.url,
+            update_interval: `${rule.match.updateIntervalHours}h`,
+            // Списки качаются через VLESS: источник может быть заблокирован.
+            http_client: { detour: TAG.proxy },
+          },
+        ]
+      : [],
+  )
 }
 
 function buildDns(dohUrl: string): Json {

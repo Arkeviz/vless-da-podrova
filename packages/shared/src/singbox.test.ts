@@ -164,3 +164,60 @@ describe('buildSingboxConfig', () => {
     ).toThrow()
   })
 })
+
+describe('правила ядра', () => {
+  const config = buildSingboxConfig({
+    server: realityServer,
+    ports,
+    clashApiSecret: 's',
+    dohUrl: DEFAULT_DOH_URL,
+    defaultAction: 'direct',
+    cacheFilePath: 'cache-abc.db',
+    rules: [
+      { id: 'b1', match: { type: 'suffix', value: 'twitch.tv' }, action: 'proxy' },
+      { id: 'c1', match: { type: 'suffix', value: 'ads.com' }, action: 'block' },
+      { id: 'c2', match: { type: 'ruleSet', url: 'https://x.org/ru.srs', format: 'binary', updateIntervalHours: 12 }, action: 'direct' },
+      { id: 'c3', match: { type: 'ip', value: '91.108.4.0/22' }, action: 'proxy' },
+      { id: 'c4', match: { type: 'keyword', value: 'tracker' }, action: 'block' },
+    ],
+  })
+  const route = config.route as Record<string, unknown>
+
+  it('исполняет только правила ядра, по порядку, с resolve перед первым IP/rule-set', () => {
+    expect(route.rules).toEqual([
+      { inbound: ['in-proxy'], action: 'route', outbound: 'proxy' },
+      { domain_suffix: ['ads.com'], action: 'reject' },
+      { action: 'resolve' },
+      { rule_set: ['rs-c2'], action: 'route', outbound: 'direct' },
+      { ip_cidr: ['91.108.4.0/22'], action: 'route', outbound: 'proxy' },
+      { domain_keyword: ['tracker'], action: 'reject' },
+    ])
+  })
+
+  it('действие по умолчанию — final', () => {
+    expect(route.final).toBe('direct')
+  })
+
+  it('описывает rule-set и включает кэш', () => {
+    expect(route.rule_set).toEqual([
+      {
+        type: 'remote',
+        tag: 'rs-c2',
+        format: 'binary',
+        url: 'https://x.org/ru.srs',
+        update_interval: '12h',
+        http_client: { detour: 'proxy' },
+      },
+    ])
+    expect((config.experimental as Record<string, unknown>).cache_file).toEqual({
+      enabled: true,
+      path: 'cache-abc.db',
+    })
+  })
+
+  it('без rule-set нет ни rule_set, ни кэша', () => {
+    const plain = buildSingboxConfig({ server: realityServer, ports, clashApiSecret: 's', dohUrl: DEFAULT_DOH_URL, cacheFilePath: 'x.db' })
+    expect(plain.route).not.toHaveProperty('rule_set')
+    expect(plain.experimental).not.toHaveProperty('cache_file')
+  })
+})
