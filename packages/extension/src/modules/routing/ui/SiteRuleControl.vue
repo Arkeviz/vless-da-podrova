@@ -38,17 +38,27 @@ const scopes = computed<{ scope: Scope; label: string }[]>(() => {
 
 const ruleByKey = computed(() => new Map(browserRules.value.map((r) => [ruleMatchKey(r.match), r.action])))
 
-// По умолчанию - точный хост, если для него уже есть правило, иначе регистрируемый домен.
+// Пока область не выбрана вручную, показываем ту, что уже отражает сохранённые правила
+// (окно закрывается и открывается заново, а правила остаются): точный хост, если для него есть правило;
+// «все домены вкладки», если правила есть минимум у двух сайтов вкладки; иначе регистрируемый домен.
 const scopeIndex = ref(0)
+const scopeChosen = ref(false)
 watch(
-  scopes,
-  (list) => {
+  [scopes, ruleByKey],
+  () => {
+    if (scopeChosen.value) return
+    const list = scopes.value
+    const hasRule = (match: SiteMatch) => ruleByKey.value.has(ruleMatchKey(match))
     const exactIndex = list.findIndex((s) => s.scope.kind === 'one' && s.scope.match.type === 'exact')
     const exact = list[exactIndex]?.scope
-    const hasExactRule = exact?.kind === 'one' && ruleByKey.value.has(ruleMatchKey(exact.match))
-    scopeIndex.value = hasExactRule ? exactIndex : 0
+    const allIndex = list.findIndex((s) => s.scope.kind === 'all')
+    const all = list[allIndex]?.scope
+    if (exact?.kind === 'one' && hasRule(exact.match)) scopeIndex.value = exactIndex
+    else if (all?.kind === 'all' && all.sites.filter((value) => hasRule({ type: 'suffix', value })).length > 1) {
+      scopeIndex.value = allIndex
+    } else scopeIndex.value = 0
   },
-  { once: true },
+  { immediate: true },
 )
 
 const scope = computed(() => scopes.value[scopeIndex.value]?.scope ?? null)
@@ -60,10 +70,10 @@ const scopeMatches = computed<SiteMatch[]>(() => {
   return current.kind === 'one' ? [current.match] : current.sites.map((value) => ({ type: 'suffix', value }))
 })
 
-/** Нажатая кнопка; null - у доменов области разные правила. */
-const choice = computed<Choice | null>(() => {
+/** Нажатая кнопка; если у доменов области разные правила - «По правилам» (разницу показывает строка «Сейчас»). */
+const choice = computed<Choice>(() => {
   const choices = new Set(scopeMatches.value.map((match) => ruleByKey.value.get(ruleMatchKey(match)) ?? 'rules'))
-  return choices.size === 1 ? [...choices][0]! : null
+  return choices.size === 1 ? [...choices][0]! : 'rules'
 })
 
 function verdictLabel(verdict: BrowserVerdict): string {
@@ -107,7 +117,7 @@ function choose(value: Choice) {
     <h2 class="site__title">{{ ru.routing.site.title }}</h2>
     <p v-if="!site" class="site__muted">{{ ru.routing.site.unavailable }}</p>
     <template v-else>
-      <select v-model="scopeIndex" class="site__scope">
+      <select v-model="scopeIndex" class="site__scope" @change="scopeChosen = true">
         <option v-for="(item, index) in scopes" :key="item.label" :value="index">{{ item.label }}</option>
       </select>
       <div class="segmented" role="group">
