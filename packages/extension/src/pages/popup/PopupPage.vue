@@ -6,7 +6,7 @@ import { ConnectionPanel, useConnection } from '@/modules/connection'
 import { TrafficBar, useLatency } from '@/modules/diagnostics'
 import { SiteRuleControl } from '@/modules/routing'
 import { ServersSection, useServers } from '@/modules/servers'
-import { TabDomainsSection } from '@/modules/tab-domains'
+import { TabDomainsSection, useActiveTabSites } from '@/modules/tab-domains'
 import { TabModeToggle, useActiveTabMode } from '@/modules/tab-mode'
 
 const { hasSelection } = useServers()
@@ -15,6 +15,7 @@ const { status } = useConnection()
 const proxyOn = computed(() => status.value.state === 'on')
 const { enabled: tabModeOn } = useActiveTabMode()
 const siteOverride = computed(() => (tabModeOn.value ? ru.routing.site.overriddenByTabMode : null))
+const { sites: tabSites } = useActiveTabSites()
 
 function openOptions() {
   void browser.runtime.openOptionsPage()
@@ -30,7 +31,7 @@ function openOptions() {
     <ConnectionPanel :can-enable="hasSelection" />
     <TrafficBar />
     <TabModeToggle :proxy-on="proxyOn" />
-    <SiteRuleControl :override="siteOverride" />
+    <SiteRuleControl :override="siteOverride" :tab-sites="tabSites" />
     <TabDomainsSection />
     <ServersSection :latency="latency" :can-test-latency="canTest !== null" @test-latency="testAll" />
   </main>

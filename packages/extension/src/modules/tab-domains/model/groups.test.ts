@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { siteOf } from '@/common/utilities/site'
-import { groupHosts, type DomainVerdict } from './groups'
+import { groupHosts, tabSites, type DomainVerdict } from './groups'
 
 describe('groupHosts', () => {
   const hosts = [
@@ -24,5 +24,16 @@ describe('groupHosts', () => {
       ['twitchcdn.net', 1, 'core'],
     ])
     expect(groups[0]!.hosts).toEqual(['gql.twitch.tv', 'passport.twitch.tv', 'www.twitch.tv'])
+  })
+})
+
+describe('tabSites', () => {
+  it('сайт страницы первым, остальные уникальны и по алфавиту', () => {
+    const hosts = ['www.ozon.ru', 'cdn1.ozone.ru', 'ir.ozone.ru', 'api.ozon.ru', 'st.ozonusercontent.com', 'mc.yandex.ru']
+    expect(tabSites(hosts, 'ozon.ru', siteOf)).toEqual(['ozon.ru', 'ozone.ru', 'ozonusercontent.com', 'yandex.ru'])
+  })
+
+  it('сайт страницы есть, даже если запросов ещё не видно', () => {
+    expect(tabSites([], 'ozon.ru', siteOf)).toEqual(['ozon.ru'])
   })
 })

@@ -72,14 +72,20 @@ export function setDefaultAction(action: DefaultAction): Promise<void> {
   return defaultActionItem.setValue(action)
 }
 
+export type SiteMatch = { type: Extract<DomainMatchType, 'exact' | 'suffix'>; value: string }
+
 /** Правило кнопки «этот сайт»: action = null снимает правило («по правилам»). */
-export async function setSiteRule(
-  match: { type: Extract<DomainMatchType, 'exact' | 'suffix'>; value: string },
-  action: BrowserAction | null,
-): Promise<void> {
-  const key = ruleMatchKey(match)
-  const rest = (await browserRulesItem.getValue()).filter((r) => ruleMatchKey(r.match) !== key)
-  await browserRulesItem.setValue(
-    action ? [...rest, { id: crypto.randomUUID(), match, action }] : rest,
-  )
+export function setSiteRule(match: SiteMatch, action: BrowserAction | null): Promise<void> {
+  return setSiteRules([match], action)
+}
+
+/**
+ * То же для нескольких доменов сразу (например, всех доменов вкладки) — одной записью,
+ * чтобы прокси браузера переприменился один раз, а не на каждый домен.
+ */
+export async function setSiteRules(matches: readonly SiteMatch[], action: BrowserAction | null): Promise<void> {
+  const keys = new Set(matches.map(ruleMatchKey))
+  const rest = (await browserRulesItem.getValue()).filter((r) => !keys.has(ruleMatchKey(r.match)))
+  const added = action ? matches.map((match) => ({ id: crypto.randomUUID(), match, action })) : []
+  await browserRulesItem.setValue([...rest, ...added])
 }

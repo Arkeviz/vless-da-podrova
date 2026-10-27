@@ -101,6 +101,10 @@ export const ru = {
       title: 'Этот сайт',
       scopeDomain: (domain: string) => `${domain} и поддомены`,
       scopeHost: (host: string) => `только ${host}`,
+      scopeAll: (count: number) => `все домены вкладки (${count})`,
+      allHint: (sites: string, more: number) =>
+        `Правила для: ${sites}${more > 0 ? ` и ещё ${more}` : ''}. Домены, к которым сайт обратится позже, ` +
+        'сюда не войдут — для них есть «Вкладка через прокси».',
       byRules: 'По правилам',
       now: 'Сейчас',
       effective: {
@@ -110,6 +114,7 @@ export const ru = {
       },
       unavailable: 'Для этой страницы правила не применяются',
       overriddenByTabMode: 'через прокси — режим вкладки важнее правил',
+      effectiveMixed: 'по-разному — у доменов разные правила',
     },
   },
   diagnostics: {

@@ -1,18 +1,23 @@
 <script setup lang="ts">
-import { browserVerdict, compileDomainRules, ruleMatchKey, type BrowserAction } from '@vdp/shared'
+import { browserVerdict, compileDomainRules, ruleMatchKey, type BrowserAction, type BrowserVerdict } from '@vdp/shared'
 import { computed, ref, watch } from 'vue'
 import { ru } from '@/common/i18n/ru'
 import { useActiveTab } from '@/common/browser/useActiveTab'
 import { useRouting } from '../composables/useRouting'
-import { setSiteRule } from '../model/rules'
+import { setSiteRules, type SiteMatch } from '../model/rules'
 
 const props = defineProps<{
   /** Что сейчас важнее правил (например, режим вкладки) — показывается вместо итога правил. */
   override?: string | null
+  /** Сайты, к которым обращалась вкладка (сайт страницы первым) — для области «все домены вкладки». */
+  tabSites?: readonly string[]
 }>()
 
-type Scope = { type: 'suffix' | 'exact'; value: string }
+/** Область правила: один домен с поддоменами, точный хост или все сайты вкладки. */
+type Scope = { kind: 'one'; match: SiteMatch } | { kind: 'all'; sites: readonly string[] }
 type Choice = BrowserAction | 'rules'
+
+const HINT_SITES = 5
 
 const { tab: site } = useActiveTab()
 const { browserRules, coreRules, defaultAction } = useRouting()
@@ -21,8 +26,13 @@ const scopes = computed<{ scope: Scope; label: string }[]>(() => {
   if (!site.value) return []
   const { host, domain } = site.value
   const result: { scope: Scope; label: string }[] = []
-  if (domain) result.push({ scope: { type: 'suffix', value: domain }, label: ru.routing.site.scopeDomain(domain) })
-  result.push({ scope: { type: 'exact', value: host }, label: ru.routing.site.scopeHost(host) })
+  if (domain) {
+    result.push({ scope: { kind: 'one', match: { type: 'suffix', value: domain } }, label: ru.routing.site.scopeDomain(domain) })
+  }
+  result.push({ scope: { kind: 'one', match: { type: 'exact', value: host } }, label: ru.routing.site.scopeHost(host) })
+  // Последней — чтобы при появлении новых доменов выбранная область не съезжала.
+  const sites = props.tabSites ?? []
+  if (sites.length > 1) result.push({ scope: { kind: 'all', sites }, label: ru.routing.site.scopeAll(sites.length) })
   return result
 })
 
@@ -33,25 +43,51 @@ const scopeIndex = ref(0)
 watch(
   scopes,
   (list) => {
-    const exactIndex = list.findIndex((s) => s.scope.type === 'exact')
-    const hasExactRule = exactIndex !== -1 && ruleByKey.value.has(ruleMatchKey(list[exactIndex]!.scope))
+    const exactIndex = list.findIndex((s) => s.scope.kind === 'one' && s.scope.match.type === 'exact')
+    const exact = list[exactIndex]?.scope
+    const hasExactRule = exact?.kind === 'one' && ruleByKey.value.has(ruleMatchKey(exact.match))
     scopeIndex.value = hasExactRule ? exactIndex : 0
   },
   { once: true },
 )
 
 const scope = computed(() => scopes.value[scopeIndex.value]?.scope ?? null)
-const choice = computed<Choice>(() => (scope.value ? (ruleByKey.value.get(ruleMatchKey(scope.value)) ?? 'rules') : 'rules'))
+
+/** Правила, которые ставит область: для «всех доменов» — по правилу на каждый сайт. */
+const scopeMatches = computed<SiteMatch[]>(() => {
+  const current = scope.value
+  if (!current) return []
+  return current.kind === 'one' ? [current.match] : current.sites.map((value) => ({ type: 'suffix', value }))
+})
+
+/** Нажатая кнопка; null — у доменов области разные правила. */
+const choice = computed<Choice | null>(() => {
+  const choices = new Set(scopeMatches.value.map((match) => ruleByKey.value.get(ruleMatchKey(match)) ?? 'rules'))
+  return choices.size === 1 ? [...choices][0]! : null
+})
+
+function verdictLabel(verdict: BrowserVerdict): string {
+  return verdict === 'core' ? ru.routing.site.effective.auto : ru.routing.site.effective[verdict]
+}
 
 const effective = computed(() => {
   if (props.override) return props.override
-  if (!site.value) return null
-  const verdict = browserVerdict(site.value.host, {
+  if (!site.value || !scope.value) return null
+  const context = {
     domainRules: compileDomainRules(browserRules.value),
     hasCoreRules: coreRules.value.length > 0,
     defaultAction: defaultAction.value,
-  })
-  return verdict === 'core' ? ru.routing.site.effective.auto : ru.routing.site.effective[verdict]
+  }
+  const hosts = scope.value.kind === 'all' ? scope.value.sites : [site.value.host]
+  const verdicts = new Set(hosts.map((host) => browserVerdict(host, context)))
+  return verdicts.size === 1 ? verdictLabel([...verdicts][0]!) : ru.routing.site.effectiveMixed
+})
+
+const allHint = computed(() => {
+  const current = scope.value
+  if (current?.kind !== 'all') return null
+  const shown = current.sites.slice(0, HINT_SITES).join(', ')
+  return ru.routing.site.allHint(shown, current.sites.length - HINT_SITES)
 })
 
 const choices: { value: Choice; label: string }[] = [
@@ -61,8 +97,8 @@ const choices: { value: Choice; label: string }[] = [
 ]
 
 function choose(value: Choice) {
-  if (!scope.value) return
-  void setSiteRule(scope.value, value === 'rules' ? null : value)
+  if (!scopeMatches.value.length) return
+  void setSiteRules(scopeMatches.value, value === 'rules' ? null : value)
 }
 </script>
 
@@ -87,6 +123,7 @@ function choose(value: Choice) {
         </button>
       </div>
       <p class="site__muted">{{ ru.routing.site.now }}: {{ effective }}</p>
+      <p v-if="allHint" class="site__muted">{{ allHint }}</p>
     </template>
   </section>
 </template>

@@ -43,3 +43,10 @@ export function groupHosts(
       a.site.localeCompare(b.site),
   )
 }
+
+/** Уникальные сайты вкладки: сайт самой страницы первым (даже если его запросов ещё нет), дальше по алфавиту. */
+export function tabSites(hosts: readonly string[], pageSite: string, siteOf: (host: string) => string): string[] {
+  const others = new Set(hosts.map(siteOf))
+  others.delete(pageSite)
+  return [pageSite, ...[...others].sort()]
+}
