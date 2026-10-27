@@ -116,9 +116,9 @@ TCP/TLS-сокетам. Поэтому соединение держит [sing-b
 расширения для Chromium и Firefox, хелпер, sing-box, скрипты установки и `README.txt` с инструкцией.
 
 1. Распакуйте архив и запустите `install.cmd` - он положит хелпер, sing-box и расширения в
-   `%LOCALAPPDATA%less-da-podrova` и зарегистрирует хелпер во всех браузерах. Если sing-box в архиве
+   `%LOCALAPPDATA%\vless-da-podrova` и зарегистрирует хелпер во всех браузерах. Если sing-box в архиве
    не нашёлся, скрипт скачает его с GitHub и сверит SHA256.
-2. Перезапустите браузер и загрузите расширение из `%LOCALAPPDATA%less-da-podrovaextension`
+2. Перезапустите браузер и загрузите расширение из `%LOCALAPPDATA%\vless-da-podrovaextension`
    (`chrome` - для Chrome / Edge / Яндекса, `firefox` или подписанный `.xpi` - для Firefox) -
    шаги те же, что в [пункте 3](#3-расширение).
 
