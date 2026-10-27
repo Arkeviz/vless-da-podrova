@@ -12,7 +12,7 @@ import {
   type HelperOutgoing,
   type HelperRequest,
 } from '@vdp/shared'
-import packageJson from '../package.json'
+import packageJson from '../../../package.json'
 import { Core } from './core'
 import { allocatePorts } from './net'
 import { helperLogPath } from './paths'

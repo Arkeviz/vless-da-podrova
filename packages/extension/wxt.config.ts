@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt'
+import rootPackage from '../../package.json' with { type: 'json' }
 
 /** Публичный ключ фиксирует ID расширения в Chromium (нужен для allowed_origins хелпера). */
 const CHROMIUM_PUBLIC_KEY =
@@ -41,6 +42,8 @@ export default defineConfig({
   }),
   manifest: ({ browser }) => ({
     name: 'vless-da-podrova',
+    // Единая релизная версия лежит в корневом package.json.
+    version: rootPackage.version,
     description: 'Трафик браузера через собственный VLESS-сервер',
     permissions: [
       'storage',

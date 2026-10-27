@@ -272,7 +272,7 @@ packages/
               правила, протокол хелпера, клиент Clash API, отрисовка иконки (+ тесты)
   helper/     нативный хост: Node/TS → exe через bun, Job Object через bun:ffi (+ smoke-тест)
   extension/  WXT + Vue 3 + TypeScript, структура FEOD (см. packages/extension/README.md)
-scripts/      install.ps1 / uninstall.ps1
+scripts/      install.ps1 / uninstall.ps1, set-version.mjs (смена релизной версии)
 docs/         SPEC.md — решения и архитектура, TESTING.md — ручная проверка, AMO_BUILD.md
 ```
 
@@ -283,6 +283,7 @@ docs/         SPEC.md — решения и архитектура, TESTING.md �
 | `pnpm build` | сборка расширения для Chromium и Firefox и хелпера |
 | `pnpm dev:chrome` / `pnpm dev:firefox` | расширение в режиме разработки с перезагрузкой |
 | `pnpm --filter @vdp/helper smoke` | smoke-тест собранного хелпера с поддельным ядром |
+| `pnpm version:set 0.3.0` | сменить релизную версию: она хранится только в корневом `package.json`, манифест расширения и хелпер берут её оттуда |
 | `pnpm --filter @vdp/extension icons` | перегенерировать PNG-иконки манифеста |
 | `pnpm --filter @vdp/extension sign:firefox` | подписать Firefox-сборку через AMO |
 
