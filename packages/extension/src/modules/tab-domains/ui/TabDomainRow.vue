@@ -6,7 +6,7 @@ import type { DomainGroup } from '../model/groups'
 
 const props = defineProps<{
   group: DomainGroup
-  /** Правило браузера «домен и поддомены» для сайта группы; null — нет. */
+  /** Правило браузера «домен и поддомены» для сайта группы; null - нет. */
   rule: BrowserAction | null
 }>()
 
@@ -15,7 +15,7 @@ const emit = defineEmits<{
 }>()
 
 const expanded = ref(false)
-/** Подпись под сайтом: единственный хост — сам хост, несколько — их число (раскрываются кликом). */
+/** Подпись под сайтом: единственный хост - сам хост, несколько - их число (раскрываются кликом). */
 const hostsLabel = computed(() => {
   const { hosts, site } = props.group
   if (hosts.length > 1) return ru.tabDomains.hosts(hosts.length)

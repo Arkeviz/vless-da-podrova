@@ -3,7 +3,7 @@ import { parseVlessLink, VlessParseError, type VlessServer } from './vless'
 export interface ParsedSubscription {
   servers: { link: string; server: VlessServer }[]
   errors: { line: string; message: string }[]
-  /** Ссылки других протоколов (vmess://, trojan://…) — расширение работает только с VLESS. */
+  /** Ссылки других протоколов (vmess://, trojan://…) - расширение работает только с VLESS. */
   skipped: number
 }
 
@@ -56,9 +56,9 @@ export function decodeBase64(value: string): string {
 export interface SubscriptionUserInfo {
   upload: number
   download: number
-  /** 0 — без лимита. */
+  /** 0 - без лимита. */
   total: number
-  /** Unix-время в секундах; null — бессрочно. */
+  /** Unix-время в секундах; null - бессрочно. */
   expire: number | null
 }
 

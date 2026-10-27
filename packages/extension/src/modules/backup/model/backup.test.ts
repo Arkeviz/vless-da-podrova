@@ -14,7 +14,7 @@ describe('резервная копия', () => {
     await byKey('local:browserRules').setValue(rules)
     await byKey('local:settings').setValue({ killSwitch: true })
     await byKey('local:tabModeAlwaysSites').setValue(['kick.com'])
-    // null (ничего не выбрано) в копию не попадает — восстанавливать там нечего.
+    // null (ничего не выбрано) в копию не попадает - восстанавливать там нечего.
     await byKey('local:selectedServerId').setValue('server-1')
 
     const backup = await exportBackup(new Date('2026-10-26T12:00:00Z'))

@@ -96,7 +96,7 @@ describe('принудительный прокси (режим вкладки)'
 describe('настройки PAC', () => {
   const domainRules = compileDomainRules([])
 
-  it('без удалённого DNS — SOCKS4 (имя резолвит браузер)', () => {
+  it('без удалённого DNS - SOCKS4 (имя резолвит браузер)', () => {
     const pac = buildPacScript({ autoPort: 1, proxyPort: 2, domainRules, remoteDns: false })
     const findProxy = new Function(`${pac}; return FindProxyForURL`)() as (url: string, host: string) => string
     expect(findProxy('https://ya.ru/', 'ya.ru')).toBe('SOCKS 127.0.0.1:1')

@@ -11,13 +11,13 @@ export type ConnectionStatus =
   | { state: 'connecting'; serverName: string }
   | {
       state: 'on'
-      /** Выбранный сервер; в режиме «авто» — название группы. */
+      /** Выбранный сервер; в режиме «авто» - название группы. */
       serverName: string
       mode: 'manual' | 'auto'
       since: number
       coreVersion: string | null
       ports: CorePorts
-      /** Секрет Clash API этого запуска ядра — для диагностики в попапе и настройках. */
+      /** Секрет Clash API этого запуска ядра - для диагностики в попапе и настройках. */
       clashApiSecret: string
     }
   | {
@@ -27,7 +27,7 @@ export type ConnectionStatus =
       blocked?: boolean
     }
 
-/** Фактическое состояние — пишет только фоновый сервис. */
+/** Фактическое состояние - пишет только фоновый сервис. */
 export const connectionStatusItem = storage.defineItem<ConnectionStatus>('local:connectionStatus', {
   fallback: { state: 'off' },
 })

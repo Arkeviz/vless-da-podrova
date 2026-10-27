@@ -1,5 +1,5 @@
 /**
- * Кадрирование native messaging: 4 байта длины (uint32, порядок байт платформы — на Windows LE)
+ * Кадрирование native messaging: 4 байта длины (uint32, порядок байт платформы - на Windows LE)
  * и UTF-8 JSON.
  */
 

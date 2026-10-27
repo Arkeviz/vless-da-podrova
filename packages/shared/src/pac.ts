@@ -31,7 +31,7 @@ export function isBypassedHost(rawHost: string): boolean {
 
 export type BrowserRoute = 'direct' | 'proxy' | 'auto'
 
-/** Набор доменов, совпадающих вместе с поддоменами. Ключи — домены, значения — true (для PAC). */
+/** Набор доменов, совпадающих вместе с поддоменами. Ключи - домены, значения - true (для PAC). */
 export type DomainSet = Record<string, true>
 
 export function toDomainSet(domains: Iterable<string>): DomainSet {
@@ -40,7 +40,7 @@ export function toDomainSet(domains: Iterable<string>): DomainSet {
   return set
 }
 
-/** Совпадает ли хост или один из его родительских доменов с набором. Самодостаточна — для PAC. */
+/** Совпадает ли хост или один из его родительских доменов с набором. Самодостаточна - для PAC. */
 export function matchDomainSet(rawHost: string, set: DomainSet): boolean {
   var candidate = rawHost.toLowerCase().replace(/\.$/, '')
   while (true) {
@@ -53,7 +53,7 @@ export function matchDomainSet(rawHost: string, set: DomainSet): boolean {
 
 /**
  * Куда браузер отправляет запрос: мимо ядра, во вход `proxy` или во вход `auto`.
- * `forcedProxy` — домены режима «вкладка через прокси» (Chromium): важнее любых правил.
+ * `forcedProxy` - домены режима «вкладка через прокси» (Chromium): важнее любых правил.
  */
 export function resolveBrowserRoute(host: string, table: DomainRuleTable, forcedProxy: DomainSet = {}): BrowserRoute {
   if (isBypassedHost(host)) return 'direct'
@@ -69,8 +69,8 @@ export interface PacInput {
   domainRules: DomainRuleTable
   forcedProxy?: DomainSet
   /**
-   * true (по умолчанию) — SOCKS5: Chrome передаёт ядру имя хоста, DNS резолвит ядро.
-   * false — SOCKS4: имя резолвит браузер системным DNS.
+   * true (по умолчанию) - SOCKS5: Chrome передаёт ядру имя хоста, DNS резолвит ядро.
+   * false - SOCKS4: имя резолвит браузер системным DNS.
    */
   remoteDns?: boolean
 }
@@ -106,7 +106,7 @@ export const KILL_SWITCH_PORT = 1
 
 /**
  * Kill-switch: всё, кроме localhost и локальной сети, отправляется в несуществующий прокси.
- * Без DIRECT в списке Chrome не откатывается на прямое соединение — сайты не открываются.
+ * Без DIRECT в списке Chrome не откатывается на прямое соединение - сайты не открываются.
  */
 export function buildKillSwitchPacScript(): string {
   return [
@@ -118,7 +118,7 @@ export function buildKillSwitchPacScript(): string {
   ].join('\n')
 }
 
-/** Как пойдёт запрос к хосту: «core» — решают правила ядра, браузер заранее не знает. */
+/** Как пойдёт запрос к хосту: «core» - решают правила ядра, браузер заранее не знает. */
 export type BrowserVerdict = 'proxy' | 'direct' | 'core'
 
 export interface VerdictContext {

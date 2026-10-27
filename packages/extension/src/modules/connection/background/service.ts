@@ -65,7 +65,7 @@ class ConnectionService {
   }
 
   async init(): Promise<void> {
-    // Chromium сохраняет настройки прокси между запусками, а порты ядра — уже нет.
+    // Chromium сохраняет настройки прокси между запусками, а порты ядра - уже нет.
     // С kill-switch до подключения трафик не выпускаем напрямую.
     const [enabled, settings] = await Promise.all([proxyEnabledItem.getValue(), getSettings()])
     if (enabled && settings.killSwitch) await applyKillSwitch()
@@ -210,7 +210,7 @@ class ConnectionService {
 
   /**
    * По умолчанию fail-open: прокси снимается, сайты открываются напрямую.
-   * С kill-switch трафик блокируется до переподключения. Обрыв на ходу — с уведомлением.
+   * С kill-switch трафик блокируется до переподключения. Обрыв на ходу - с уведомлением.
    */
   private async fail(message: string, { unexpected = false } = {}): Promise<void> {
     await this.shutdown()
@@ -234,7 +234,7 @@ class ConnectionService {
     try {
       await helper.call('stop', {})
     } catch {
-      // Хелпер уже недоступен — ядро умрёт вместе с ним (Job Object).
+      // Хелпер уже недоступен - ядро умрёт вместе с ним (Job Object).
     }
     helper.disconnect()
   }

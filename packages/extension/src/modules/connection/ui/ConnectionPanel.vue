@@ -4,7 +4,7 @@ import { ru } from '@/common/i18n/ru'
 import { useConnection } from '../composables/useConnection'
 
 const props = defineProps<{
-  /** Есть ли выбранный сервер — без него включать нечего. */
+  /** Есть ли выбранный сервер - без него включать нечего. */
   canEnable: boolean
 }>()
 

@@ -11,8 +11,8 @@ pnpm --filter @vdp/extension build:firefox
 
 The result is in `packages/extension/.output/firefox-mv2` and must match the uploaded package.
 
-- `packages/extension` — the extension (WXT + Vue 3 + TypeScript).
-- `packages/shared` — pure TypeScript used by the extension (VLESS link parser, sing-box config and PAC
+- `packages/extension` - the extension (WXT + Vue 3 + TypeScript).
+- `packages/shared` - pure TypeScript used by the extension (VLESS link parser, sing-box config and PAC
   generation). It is imported as TypeScript source and bundled by WXT/Vite.
 - The native helper (`packages/helper`) is a separate Windows program, not part of the extension package.
 

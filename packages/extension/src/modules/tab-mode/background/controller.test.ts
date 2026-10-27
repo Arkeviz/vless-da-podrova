@@ -40,7 +40,7 @@ describe('режим вкладки: фон', () => {
     ]) {
       controller.onRequest(request(7, url))
     }
-    // Другая вкладка не в режиме — её запросы не учатся.
+    // Другая вкладка не в режиме - её запросы не учатся.
     controller.onRequest(request(8, 'https://example.org/'))
 
     await vi.waitFor(async () => expect(await learnedDomainsItem.getValue()).toEqual({ 'twitch.tv': ['7tv.app', 'ttvnw.net'] }), {
@@ -58,7 +58,7 @@ describe('режим вкладки: фон', () => {
     await vi.waitFor(async () => expect(await tabModeTabsItem.getValue()).toEqual([7, 9]))
   })
 
-  it('«всегда для сайта» включает режим при переходе на сайт, закрытие вкладки — выключает', async () => {
+  it('«всегда для сайта» включает режим при переходе на сайт, закрытие вкладки - выключает', async () => {
     await alwaysSitesItem.setValue(['kick.com'])
     const controller = await startController()
 
@@ -70,7 +70,7 @@ describe('режим вкладки: фон', () => {
     await vi.waitFor(async () => expect(await tabModeTabsItem.getValue()).toEqual([]))
   })
 
-  it('принудительные домены — сайты вкладок в режиме и «всегда» вместе с выученным', async () => {
+  it('принудительные домены - сайты вкладок в режиме и «всегда» вместе с выученным', async () => {
     await activeSitesItem.setValue(['twitch.tv'])
     await alwaysSitesItem.setValue(['kick.com'])
     await learnedDomainsItem.setValue({ 'twitch.tv': ['ttvnw.net'], 'kick.com': ['kickcdn.example'], 'other.org': ['x.net'] })

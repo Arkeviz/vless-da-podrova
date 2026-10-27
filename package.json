@@ -1,6 +1,6 @@
 {
   "name": "vless-da-podrova",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.14.0",
@@ -10,7 +10,8 @@
     "dev:chrome": "pnpm --filter @vdp/extension dev",
     "dev:firefox": "pnpm --filter @vdp/extension dev:firefox",
     "build": "pnpm --filter @vdp/extension build && pnpm --filter @vdp/extension build:firefox && pnpm --filter @vdp/helper build",
-    "version:set": "node scripts/set-version.mjs"
+    "version:set": "node scripts/set-version.mjs",
+    "release:pack": "pwsh -NoProfile -File scripts/package-release.ps1 -SkipBuild"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

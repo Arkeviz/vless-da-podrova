@@ -13,7 +13,7 @@ export interface AddServersResult {
   errors: { line: string; message: string }[]
 }
 
-/** Тег выхода сервера в конфиге ядра — общий контракт ядра, Clash API и диагностики. */
+/** Тег выхода сервера в конфиге ядра - общий контракт ядра, Clash API и диагностики. */
 export function serverTag(id: string): string {
   return `srv-${id}`
 }
@@ -83,7 +83,7 @@ export type ServerPool =
   | { mode: 'manual'; servers: StoredServer[]; selected: StoredServer }
   | { mode: 'auto'; servers: StoredServer[] }
 
-/** Все серверы и выбор для запуска ядра; null — запускать не с чем. */
+/** Все серверы и выбор для запуска ядра; null - запускать не с чем. */
 export async function getServerPool(): Promise<ServerPool | null> {
   const [servers, selectedId] = await Promise.all([getAllServers(), selectedServerIdItem.getValue()])
   if (!servers.length) return null

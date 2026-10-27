@@ -1,6 +1,6 @@
 /**
  * Нативный хост vless-da-podrova. Браузер запускает его по запросу расширения
- * и общается через stdin/stdout (native messaging). Stdout — только для протокола.
+ * и общается через stdin/stdout (native messaging). Stdout - только для протокола.
  */
 import { appendFileSync } from 'node:fs'
 import {
@@ -106,7 +106,7 @@ process.stdin.on('data', (chunk: Buffer) => {
   }
 })
 
-// Браузер закрыл порт (или сам завершился) — гасим ядро и выходим.
+// Браузер закрыл порт (или сам завершился) - гасим ядро и выходим.
 process.stdin.on('end', () => void queue.then(() => shutdown('stdin закрыт')))
 
 debug(`запущен, аргументы: ${JSON.stringify(process.argv.slice(2))}`)

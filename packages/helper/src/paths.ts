@@ -10,5 +10,5 @@ export const corePath = join(installDir, 'sing-box.exe')
 export const runDir = join(installDir, 'run')
 export const helperLogPath = join(installDir, 'helper.log')
 
-/** У каждого браузера свой экземпляр хелпера — конфиги не должны пересекаться. */
+/** У каждого браузера свой экземпляр хелпера - конфиги не должны пересекаться. */
 export const configPath = join(runDir, `config-${process.pid}.json`)

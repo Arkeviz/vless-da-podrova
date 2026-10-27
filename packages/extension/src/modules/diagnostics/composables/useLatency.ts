@@ -11,7 +11,7 @@ export function useLatency() {
   const { endpoint } = useClashEndpoint()
   const latency = reactive<Record<string, ServerLatency>>({})
 
-  // Новый запуск ядра — старые замеры уже ни о чём не говорят.
+  // Новый запуск ядра - старые замеры уже ни о чём не говорят.
   watch(endpoint, () => {
     for (const id of Object.keys(latency)) delete latency[id]
   })

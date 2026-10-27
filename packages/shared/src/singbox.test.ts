@@ -125,7 +125,7 @@ describe('buildSingboxConfig', () => {
     `)
   })
 
-  it('режим «авто» — группа urltest из всех серверов', () => {
+  it('режим «авто» - группа urltest из всех серверов', () => {
     const config = build({
       servers: [
         { tag: 'srv-a', server: realityServer },
@@ -229,7 +229,7 @@ describe('правила ядра', () => {
     ])
   })
 
-  it('действие по умолчанию — final', () => {
+  it('действие по умолчанию - final', () => {
     expect(route.final).toBe('direct')
   })
 

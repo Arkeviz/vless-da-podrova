@@ -8,7 +8,7 @@ import { useTabMode } from '../composables/useTabMode'
 import { setAlwaysForSite, setTabMode } from '../model/tab-mode'
 
 defineProps<{
-  /** Прокси включён и подключён — иначе режиму нечего делать. */
+  /** Прокси включён и подключён - иначе режиму нечего делать. */
   proxyOn: boolean
 }>()
 
@@ -28,7 +28,7 @@ async function toggle() {
   error.value = null
   const next = !enabled.value
   // Chromium: без доступа к сайтам webRequest не видит запросы вкладки.
-  // Запрос — первым await, пока жест пользователя ещё действует.
+  // Запрос - первым await, пока жест пользователя ещё действует.
   if (next && !isFirefox) {
     const granted = await browser.permissions.request({ origins: ['https://*/*', 'http://*/*'] })
     if (!granted) {

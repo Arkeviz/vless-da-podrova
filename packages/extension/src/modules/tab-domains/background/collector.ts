@@ -2,9 +2,9 @@ import { isBypassedHost } from '@vdp/shared'
 import { browser } from 'wxt/browser'
 import { tabDomainsItem } from '../model/storage'
 
-/** Новые хосты пишутся пачкой — запросов на странице сотни. */
+/** Новые хосты пишутся пачкой - запросов на странице сотни. */
 const FLUSH_MS = 1_000
-/** Больше на вкладку не храним: такие страницы — редкость, а попапу хватит и этого. */
+/** Больше на вкладку не храним: такие страницы - редкость, а попапу хватит и этого. */
 const MAX_HOSTS_PER_TAB = 500
 
 /**
@@ -18,7 +18,7 @@ export class TabDomainsCollector {
   private timer: ReturnType<typeof setTimeout> | null = null
 
   async start(): Promise<void> {
-    // Фон мог перезапуститься — продолжаем со списков из session-хранилища.
+    // Фон мог перезапуститься - продолжаем со списков из session-хранилища.
     for (const [tabId, hosts] of Object.entries(await tabDomainsItem.getValue())) {
       const id = Number(tabId)
       if (!this.hosts.has(id)) this.hosts.set(id, new Set(hosts))
@@ -82,7 +82,7 @@ export class TabDomainsCollector {
 
 export function startTabDomains(): void {
   const collector = new TabDomainsCollector()
-  // Слушатели — синхронно, чтобы MV3 будил фон на эти события.
+  // Слушатели - синхронно, чтобы MV3 будил фон на эти события.
   browser.webRequest.onBeforeRequest.addListener(
     (details) => {
       collector.onRequest(details)

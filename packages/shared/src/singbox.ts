@@ -20,7 +20,7 @@ export interface CoreServer {
 }
 
 /**
- * Выход `proxy` — переключатель (selector) между всеми серверами или группа urltest.
+ * Выход `proxy` - переключатель (selector) между всеми серверами или группа urltest.
  * Ручной выбор меняется через Clash API без перезапуска ядра.
  */
 export type ServerSelection = { mode: 'manual'; tag: string } | { mode: 'auto' }
@@ -137,7 +137,7 @@ function buildRouteRules(rules: readonly Rule[]): Json[] {
 
   for (const rule of rules) {
     const { match } = rule
-    // IP-условиям нужен адрес, а браузер присылает домен — резолвим один раз,
+    // IP-условиям нужен адрес, а браузер присылает домен - резолвим один раз,
     // прямо перед первым правилом, которому он нужен (rule-set может содержать IP).
     if (!resolved && (match.type === 'ip' || match.type === 'ruleSet')) {
       result.push({ action: 'resolve' })
@@ -207,7 +207,7 @@ function buildDns(dohUrl: string): Json {
     return { servers: [doh], final: TAG.dns }
   }
 
-  // Домен DoH-сервера нужно чем-то разрезолвить — системным DNS, один раз.
+  // Домен DoH-сервера нужно чем-то разрезолвить - системным DNS, один раз.
   doh.domain_resolver = TAG.dnsBootstrap
   return {
     servers: [doh, { type: 'local', tag: TAG.dnsBootstrap }],

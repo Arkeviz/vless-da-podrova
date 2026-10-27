@@ -12,7 +12,7 @@ export interface TabModeState {
   tabIds: number[]
   alwaysSites: DomainSet
   /**
-   * Chromium: домены, которые PAC отправляет в прокси ради режима вкладки, — сайты вкладок
+   * Chromium: домены, которые PAC отправляет в прокси ради режима вкладки, - сайты вкладок
    * в режиме и сайты «всегда», вместе с выученными для них доменами.
    */
   forcedDomains: string[]

@@ -35,7 +35,7 @@ export function watchRouting(callback: () => void): () => void {
 }
 
 /**
- * Добавляет правило в нужный список: доменные proxy/direct — в браузер, остальное — в ядро.
+ * Добавляет правило в нужный список: доменные proxy/direct - в браузер, остальное - в ядро.
  * Правило с тем же условием заменяется. Бросает RuleValidationError на некорректный ввод.
  */
 export async function addRule(input: RuleMatchInput, action: RuleAction): Promise<void> {
@@ -80,7 +80,7 @@ export function setSiteRule(match: SiteMatch, action: BrowserAction | null): Pro
 }
 
 /**
- * То же для нескольких доменов сразу (например, всех доменов вкладки) — одной записью,
+ * То же для нескольких доменов сразу (например, всех доменов вкладки) - одной записью,
  * чтобы прокси браузера переприменился один раз, а не на каждый домен.
  */
 export async function setSiteRules(matches: readonly SiteMatch[], action: BrowserAction | null): Promise<void> {

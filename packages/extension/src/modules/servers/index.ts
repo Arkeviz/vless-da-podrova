@@ -13,5 +13,5 @@ export { useServers } from './composables/useServers'
 export { default as ServersSection } from './ui/ServersSection.vue'
 export { default as SubscriptionsSection } from './ui/SubscriptionsSection.vue'
 
-/** Серверы, подписки и выбор — входят в резервную копию. */
+/** Серверы, подписки и выбор - входят в резервную копию. */
 export const backupItems = [serversItem, subscriptionsItem, selectedServerIdItem]

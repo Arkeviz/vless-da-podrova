@@ -34,7 +34,7 @@ export function useTraffic() {
         try {
           for await (const sample of clashTraffic(current, ownController.signal)) speed.value = sample
         } catch {
-          // Поток прервался (остановка ядра или закрытие попапа) — просто перестаём показывать.
+          // Поток прервался (остановка ядра или закрытие попапа) - просто перестаём показывать.
         }
       })()
 

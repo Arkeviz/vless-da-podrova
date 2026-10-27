@@ -11,6 +11,9 @@ export default defineConfig({
   entrypointsDir: 'app/entrypoints',
   publicDir: 'src/app/public',
   zip: {
+    // Версия берётся из манифеста (то есть из корневого package.json): в пакете extension её нет.
+    artifactTemplate: '{{name}}-{{version}}-{{browser}}.zip',
+    sourcesTemplate: '{{name}}-{{version}}-sources.zip',
     // AMO просит исходники для собранного кода. Расширение зависит от packages/shared,
     // поэтому архив исходников собирается от корня монорепо, без хелпера и секретов.
     sourcesRoot: '../..',
@@ -59,8 +62,8 @@ export default defineConfig({
       'notifications',
       // Firefox (MV2): proxy.onRequest видит только запросы к разрешённым хостам;
       // заодно это доступ к подпискам и к Clash API ядра.
-      // Chromium: неблокирующий webRequest — обучение доменам в режиме вкладки.
-      // Firefox: блокирующий webRequest — kill-switch.
+      // Chromium: неблокирующий webRequest - обучение доменам в режиме вкладки.
+      // Firefox: блокирующий webRequest - kill-switch.
       ...(browser === 'firefox' ? ['<all_urls>', 'webRequest', 'webRequestBlocking'] : ['webRequest']),
     ],
     ...(browser === 'firefox'
@@ -68,7 +71,7 @@ export default defineConfig({
       : {
           // Clash API ядра на localhost.
           host_permissions: ['http://127.0.0.1/*'],
-          // Доступ к адресам подписок — при добавлении подписки, ко всем сайтам —
+          // Доступ к адресам подписок - при добавлении подписки, ко всем сайтам -
           // при первом включении режима вкладки (иначе webRequest не видит запросы).
           optional_host_permissions: ['https://*/*', 'http://*/*'],
         }),

@@ -15,7 +15,7 @@ const { tab } = useActiveTab()
 const { groups, hostCount } = useTabDomains(tab)
 const { browserRules } = useRouting()
 
-// Chromium видит запросы вкладок, только если выдан доступ к сайтам; Firefox — всегда.
+// Chromium видит запросы вкладок, только если выдан доступ к сайтам; Firefox - всегда.
 const hasAccess = ref(isFirefox)
 const justGranted = ref(false)
 

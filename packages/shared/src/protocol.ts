@@ -16,7 +16,7 @@ export interface HelperCommands {
     result: { ports: number[] }
   }
   start: {
-    /** `readinessPort` — порт, который должен начать принимать соединения после старта ядра. */
+    /** `readinessPort` - порт, который должен начать принимать соединения после старта ядра. */
     params: { config: unknown; readinessPort: number }
     result: { pid: number }
   }

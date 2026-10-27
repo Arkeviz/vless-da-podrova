@@ -7,9 +7,9 @@ import { useRouting } from '../composables/useRouting'
 import { setSiteRules, type SiteMatch } from '../model/rules'
 
 const props = defineProps<{
-  /** Что сейчас важнее правил (например, режим вкладки) — показывается вместо итога правил. */
+  /** Что сейчас важнее правил (например, режим вкладки) - показывается вместо итога правил. */
   override?: string | null
-  /** Сайты, к которым обращалась вкладка (сайт страницы первым) — для области «все домены вкладки». */
+  /** Сайты, к которым обращалась вкладка (сайт страницы первым) - для области «все домены вкладки». */
   tabSites?: readonly string[]
 }>()
 
@@ -30,7 +30,7 @@ const scopes = computed<{ scope: Scope; label: string }[]>(() => {
     result.push({ scope: { kind: 'one', match: { type: 'suffix', value: domain } }, label: ru.routing.site.scopeDomain(domain) })
   }
   result.push({ scope: { kind: 'one', match: { type: 'exact', value: host } }, label: ru.routing.site.scopeHost(host) })
-  // Последней — чтобы при появлении новых доменов выбранная область не съезжала.
+  // Последней - чтобы при появлении новых доменов выбранная область не съезжала.
   const sites = props.tabSites ?? []
   if (sites.length > 1) result.push({ scope: { kind: 'all', sites }, label: ru.routing.site.scopeAll(sites.length) })
   return result
@@ -38,7 +38,7 @@ const scopes = computed<{ scope: Scope; label: string }[]>(() => {
 
 const ruleByKey = computed(() => new Map(browserRules.value.map((r) => [ruleMatchKey(r.match), r.action])))
 
-// По умолчанию — точный хост, если для него уже есть правило, иначе регистрируемый домен.
+// По умолчанию - точный хост, если для него уже есть правило, иначе регистрируемый домен.
 const scopeIndex = ref(0)
 watch(
   scopes,
@@ -53,14 +53,14 @@ watch(
 
 const scope = computed(() => scopes.value[scopeIndex.value]?.scope ?? null)
 
-/** Правила, которые ставит область: для «всех доменов» — по правилу на каждый сайт. */
+/** Правила, которые ставит область: для «всех доменов» - по правилу на каждый сайт. */
 const scopeMatches = computed<SiteMatch[]>(() => {
   const current = scope.value
   if (!current) return []
   return current.kind === 'one' ? [current.match] : current.sites.map((value) => ({ type: 'suffix', value }))
 })
 
-/** Нажатая кнопка; null — у доменов области разные правила. */
+/** Нажатая кнопка; null - у доменов области разные правила. */
 const choice = computed<Choice | null>(() => {
   const choices = new Set(scopeMatches.value.map((match) => ruleByKey.value.get(ruleMatchKey(match)) ?? 'rules'))
   return choices.size === 1 ? [...choices][0]! : null

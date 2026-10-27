@@ -11,5 +11,5 @@ export { useRouting } from './composables/useRouting'
 export { default as SiteRuleControl } from './ui/SiteRuleControl.vue'
 export { default as RulesEditor } from './ui/RulesEditor.vue'
 
-/** Правила и действие по умолчанию — входят в резервную копию. */
+/** Правила и действие по умолчанию - входят в резервную копию. */
 export const backupItems = [browserRulesItem, coreRulesItem, defaultActionItem]

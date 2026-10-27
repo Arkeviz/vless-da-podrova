@@ -22,7 +22,7 @@ export class BackupError extends Error {
 
 type AnyItem = WxtStorageItem<unknown, Record<string, unknown>>
 
-/** Что входит в копию — каждый модуль объявляет сам в своём public API. */
+/** Что входит в копию - каждый модуль объявляет сам в своём public API. */
 export const allBackupItems = [...serverItems, ...routingItems, ...tabModeItems, ...settingsItems] as AnyItem[]
 
 export async function exportBackup(now = new Date()): Promise<BackupFile> {

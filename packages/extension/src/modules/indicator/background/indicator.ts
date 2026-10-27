@@ -22,10 +22,10 @@ const BADGE = {
 } as const
 
 type Tab = { id?: number; url?: string }
-/** «core» — решают правила ядра, браузер заранее этого не знает; «tab» — режим вкладки. */
+/** «core» - решают правила ядра, браузер заранее этого не знает; «tab» - режим вкладки. */
 type Verdict = 'proxy' | 'direct' | 'core' | 'tab'
 
-// MV3 — action, Firefox MV2 — browserAction.
+// MV3 - action, Firefox MV2 - browserAction.
 const action =
   browser.action ?? (browser as unknown as { browserAction: typeof browser.action }).browserAction
 
@@ -96,8 +96,8 @@ class Indicator {
 
     const badge = verdict && verdict !== 'core' ? BADGE[verdict] : null
     const title = verdict
-      ? `${ru.appName} — ${ru.indicator.verdict[verdict]}`
-      : `${ru.appName} — ${ru.connection.state[this.status.state]}`
+      ? `${ru.appName} - ${ru.indicator.verdict[verdict]}`
+      : `${ru.appName} - ${ru.connection.state[this.status.state]}`
 
     try {
       await action.setBadgeText({ tabId: tab.id, text: badge?.text ?? '' })
@@ -109,7 +109,7 @@ class Indicator {
   }
 }
 
-/** Фон: цвет иконки — состояние подключения, бейдж — как идёт текущая вкладка. */
+/** Фон: цвет иконки - состояние подключения, бейдж - как идёт текущая вкладка. */
 export function startIndicator(): void {
   const indicator = new Indicator()
   let queue: Promise<void> = Promise.resolve()

@@ -1,0 +1,52 @@
+# Релиз: git tag v<версия из корневого package.json> && git push --tags
+# Собирает архив vless-da-podrova-<версия>.zip и прикладывает его к GitHub Release.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      # Необязательно: с этими секретами в архив попадёт подписанный .xpi для Firefox.
+      WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+      WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Версия в package.json совпадает с тегом
+        run: |
+          $version = (Get-Content -Raw package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Тег $env:GITHUB_REF_NAME не совпадает с версией v$version в package.json (pnpm version:set)"
+          }
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+      # Подпись Firefox через AMO (unlisted). Не удалась - релиз всё равно выходит без .xpi.
+      - name: Подпись Firefox
+        if: env.WEB_EXT_API_KEY != '' && env.WEB_EXT_API_SECRET != ''
+        continue-on-error: true
+        run: pnpm --filter @vdp/extension sign:firefox
+
+      - name: Архив релиза
+        run: pwsh -NoProfile -File scripts/package-release.ps1 -SkipBuild
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$env:GITHUB_REF_NAME" "release/vless-da-podrova-$($env:GITHUB_REF_NAME.TrimStart('v')).zip" --title "$env:GITHUB_REF_NAME" --generate-notes

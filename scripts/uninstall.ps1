@@ -31,7 +31,7 @@ if (-not $KeepFiles -and (Test-Path $InstallDir)) {
     Remove-Item -Recurse -Force $InstallDir
     Write-Host "Удалена папка $InstallDir"
   } catch {
-    throw "Не удалось удалить $InstallDir — вероятно, хелпер или sing-box запущены. Закройте браузеры и повторите."
+    throw "Не удалось удалить $InstallDir - вероятно, хелпер или sing-box запущены. Закройте браузеры и повторите."
   }
 }
 

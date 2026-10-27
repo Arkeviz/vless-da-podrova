@@ -13,7 +13,7 @@ export function originPattern(url: string): string {
 
 /**
  * Chromium: доступ к адресу подписки выдаётся по запросу (optional_host_permissions).
- * Вызывать прямо в обработчике клика — браузер требует жест пользователя.
+ * Вызывать прямо в обработчике клика - браузер требует жест пользователя.
  */
 export async function requestSubscriptionAccess(url: string): Promise<boolean> {
   // Firefox (MV2): доступ ко всем адресам уже есть, а запрос не объявленных в
@@ -131,7 +131,7 @@ async function patchSubscription(id: string, patch: Partial<Subscription>): Prom
 
 function describeFetchError(error: unknown): string {
   if (error instanceof DOMException && error.name === 'TimeoutError') return ru.subscriptions.timeout
-  // Chromium без выданного доступа к адресу отвечает CORS-ошибкой — fetch падает с TypeError.
+  // Chromium без выданного доступа к адресу отвечает CORS-ошибкой - fetch падает с TypeError.
   if (error instanceof TypeError) return ru.subscriptions.network
   return (error as Error).message
 }

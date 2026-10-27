@@ -90,7 +90,7 @@ async function startCore(client: Client, extra: object = {}) {
   const unknown = await client.call('nope')
   check('неизвестная команда', unknown.ok === false, unknown)
 
-  // 2. Закрытие stdin — хелпер гасит ядро и выходит.
+  // 2. Закрытие stdin - хелпер гасит ядро и выходит.
   const again = await startCore(client)
   const exited = client.exited()
   client.proc.stdin!.end()
@@ -98,7 +98,7 @@ async function startCore(client: Client, extra: object = {}) {
   check('stdin закрыт → ядро убито', !alive(again.result.pid))
 }
 
-// 3. Хелпер убит жёстко — Job Object убивает ядро.
+// 3. Хелпер убит жёстко - Job Object убивает ядро.
 {
   const client = new Client()
   const started = await startCore(client)
@@ -109,7 +109,7 @@ async function startCore(client: Client, extra: object = {}) {
   check('хелпер убит → ядро убито (Job Object)', !alive(started.result.pid), started)
 }
 
-// 4. Падение ядра — событие core-exited.
+// 4. Падение ядра - событие core-exited.
 {
   const client = new Client()
   await startCore(client, { crashAfterMs: 300 })
@@ -120,7 +120,7 @@ async function startCore(client: Client, extra: object = {}) {
   await client.exited()
 }
 
-// 5. Ядро падает при старте — понятная ошибка.
+// 5. Ядро падает при старте - понятная ошибка.
 {
   const client = new Client()
   const started = await client.call('start', { config: { inbounds: [] }, readinessPort: 1 })

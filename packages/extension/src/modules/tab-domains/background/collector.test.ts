@@ -23,7 +23,7 @@ describe('сбор доменов вкладки', () => {
     expect(await tabDomainsItem.getValue()).toEqual({ 7: ['www.twitch.tv', 'gql.twitch.tv'] })
   })
 
-  it('новая загрузка страницы начинает список заново, закрытие вкладки — удаляет', async () => {
+  it('новая загрузка страницы начинает список заново, закрытие вкладки - удаляет', async () => {
     const collector = new TabDomainsCollector()
     await collector.start()
     collector.onRequest(request(7, 'https://a.example.com/', 'main_frame'))

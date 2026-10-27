@@ -13,11 +13,11 @@ import { fileURLToPath } from 'node:url'
 const WEB_EXT_VERSION = '10.8.0'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string }
+const { version } = JSON.parse(readFileSync(join(root, '../../package.json'), 'utf8')) as { version: string }
 
 if (!process.env.WEB_EXT_API_KEY || !process.env.WEB_EXT_API_SECRET) {
   console.error(
-    'Задайте WEB_EXT_API_KEY и WEB_EXT_API_SECRET — ключи API AMO:\n' +
+    'Задайте WEB_EXT_API_KEY и WEB_EXT_API_SECRET - ключи API AMO:\n' +
       '  https://addons.mozilla.org/developers/addon/api/key/',
   )
   process.exit(1)
@@ -36,4 +36,4 @@ run(
     '--artifacts-dir=.output/signed',
   ].join(' '),
 )
-console.log('Подписанный .xpi — в packages/extension/.output/signed')
+console.log('Подписанный .xpi - в packages/extension/.output/signed')

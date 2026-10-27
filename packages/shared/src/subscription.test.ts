@@ -9,7 +9,7 @@ const plain = [linkA, 'vmess://eyJ2IjoiMiJ9', '', linkB, `vless://${UUID}@c.exam
 const base64 = (text: string) => btoa(String.fromCharCode(...new TextEncoder().encode(text)))
 
 describe('parseSubscription', () => {
-  it('разбирает plain-список: VLESS — в серверы, остальное пропускает', () => {
+  it('разбирает plain-список: VLESS - в серверы, остальное пропускает', () => {
     const result = parseSubscription(plain)
     expect(result.servers.map((s) => s.server.name)).toEqual(['А', 'B'])
     expect(result.skipped).toBe(1)
@@ -27,7 +27,7 @@ describe('parseSubscription', () => {
     expect(parseSubscription(encoded).servers[0]!.link).toBe(linkA)
   })
 
-  it('пустая подписка — пустой результат', () => {
+  it('пустая подписка - пустой результат', () => {
     expect(parseSubscription('')).toEqual({ servers: [], errors: [], skipped: 0 })
   })
 })

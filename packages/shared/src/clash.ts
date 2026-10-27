@@ -34,7 +34,7 @@ async function request(endpoint: ClashEndpoint, path: string, init: RequestInit 
     try {
       message = (JSON.parse(text) as { message?: string }).message ?? text
     } catch {
-      // Не JSON — оставляем как есть.
+      // Не JSON - оставляем как есть.
     }
     throw new ClashApiError(message || `HTTP ${response.status}`, response.status)
   }
@@ -49,7 +49,7 @@ export async function clashSelect(endpoint: ClashEndpoint, group: string, name: 
   })
 }
 
-/** Какой сервер сейчас выбран в группе (для urltest — самый быстрый). */
+/** Какой сервер сейчас выбран в группе (для urltest - самый быстрый). */
 export async function clashGroupNow(endpoint: ClashEndpoint, group: string): Promise<string | null> {
   const response = await request(endpoint, `/proxies/${encodeURIComponent(group)}`)
   return ((await response.json()) as { now?: string }).now ?? null

@@ -3,7 +3,7 @@ import type { BrowserVerdict } from '@vdp/shared'
 export type DomainVerdict = BrowserVerdict | 'tab' | 'mixed'
 
 export interface DomainGroup {
-  /** Регистрируемый домен — по нему ставится правило «домен и поддомены». */
+  /** Регистрируемый домен - по нему ставится правило «домен и поддомены». */
   site: string
   hosts: string[]
   verdict: DomainVerdict
@@ -11,7 +11,7 @@ export interface DomainGroup {
 
 /**
  * Группирует хосты вкладки по сайтам: сначала сайт самой страницы, потом по числу хостов.
- * `siteOf` и `verdictOf` передаются снаружи — так функция чистая и тестируется без браузера.
+ * `siteOf` и `verdictOf` передаются снаружи - так функция чистая и тестируется без браузера.
  */
 export function groupHosts(
   hosts: readonly string[],

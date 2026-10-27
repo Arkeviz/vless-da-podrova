@@ -1,6 +1,6 @@
 /**
  * Правила маршрутизации. Доменные правила `proxy`/`direct` исполняет браузер (мгновенно),
- * остальные — ядро по порядку списка. Доменные правила браузера всегда приоритетнее правил ядра.
+ * остальные - ядро по порядку списка. Доменные правила браузера всегда приоритетнее правил ядра.
  */
 
 export type DomainMatchType = 'exact' | 'suffix' | 'keyword'
@@ -54,7 +54,7 @@ export function normalizeRuleMatch(input: RuleMatchInput): RuleMatch {
     case 'keyword': {
       const value = input.value.trim().toLowerCase()
       if (!value) throw new RuleValidationError('Укажите ключевое слово')
-      // Браузер передаёт хосты в punycode — кириллическое слово никогда не совпадёт.
+      // Браузер передаёт хосты в punycode - кириллическое слово никогда не совпадёт.
       if (!/^[a-z0-9.-]+$/.test(value)) {
         throw new RuleValidationError('Ключевое слово может содержать только латиницу, цифры, точку и дефис')
       }
@@ -78,7 +78,7 @@ export function normalizeDomain(raw: string): string {
 
   let hostname: string
   try {
-    // Заодно переводит IDN (пример.рф) в punycode — так хосты видит браузер.
+    // Заодно переводит IDN (пример.рф) в punycode - так хосты видит браузер.
     hostname = new URL(`http://${value}/`).hostname
   } catch {
     throw new RuleValidationError(`Некорректный домен: ${raw}`)
@@ -125,12 +125,12 @@ function normalizeRuleSet(input: Extract<RuleMatchInput, { type: 'ruleSet' }>): 
 
   const format = input.format ?? guessRuleSetFormat(url.pathname)
   if (!format) {
-    throw new RuleValidationError('Не удалось определить формат rule-set по URL — выберите его вручную')
+    throw new RuleValidationError('Не удалось определить формат rule-set по URL - выберите его вручную')
   }
 
   const hours = input.updateIntervalHours ?? DEFAULT_RULE_SET_UPDATE_HOURS
   if (!Number.isInteger(hours) || hours < 1 || hours > 24 * 30) {
-    throw new RuleValidationError('Интервал обновления — от 1 до 720 часов')
+    throw new RuleValidationError('Интервал обновления - от 1 до 720 часов')
   }
   return { type: 'ruleSet', url: url.toString(), format, updateIntervalHours: hours }
 }
@@ -146,7 +146,7 @@ export function ruleMatchKey(match: RuleMatch): string {
   return match.type === 'ruleSet' ? `ruleSet:${match.url}` : `${match.type}:${match.value}`
 }
 
-/** Компактная таблица доменных правил браузера — встраивается в PAC как JSON. */
+/** Компактная таблица доменных правил браузера - встраивается в PAC как JSON. */
 export interface DomainRuleTable {
   exact: Record<string, BrowserAction>
   suffix: Record<string, BrowserAction>

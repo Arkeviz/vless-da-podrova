@@ -20,7 +20,7 @@ export class Core {
   private child: ChildProcess | null = null
   private startedAt: number | null = null
   private readonly log: string[] = []
-  /** Процессы, которые мы остановили сами, — их завершение не считается падением. */
+  /** Процессы, которые мы остановили сами, - их завершение не считается падением. */
   private readonly stoppedByUs = new WeakSet<ChildProcess>()
 
   constructor(private readonly onUnexpectedExit: (exit: CoreExit) => void) {}

@@ -31,10 +31,10 @@ interface FirefoxState {
 }
 
 let firefoxState: FirefoxState | null = null
-/** Firefox: kill-switch — блокирующий webRequest отменяет всё, кроме локальных адресов. */
+/** Firefox: kill-switch - блокирующий webRequest отменяет всё, кроме локальных адресов. */
 let firefoxKillSwitch = false
 
-/** Что из состояния влияет на браузерную часть — при изменении прокси переприменяется. */
+/** Что из состояния влияет на браузерную часть - при изменении прокси переприменяется. */
 export function browserProxyKey(state: BrowserProxyState): string {
   const { domainRules, tabMode, remoteDns } = state
   return import.meta.env.FIREFOX
@@ -42,7 +42,7 @@ export function browserProxyKey(state: BrowserProxyState): string {
     : JSON.stringify([domainRules, tabMode.forcedDomains, remoteDns])
 }
 
-/** Firefox: слушатель регистрируется синхронно при старте фона, пока портов нет — всё напрямую. */
+/** Firefox: слушатель регистрируется синхронно при старте фона, пока портов нет - всё напрямую. */
 export function installFirefoxProxyListener(): void {
   const proxy = (browser as unknown as { proxy: FirefoxProxyApi }).proxy
   proxy.onRequest.addListener(

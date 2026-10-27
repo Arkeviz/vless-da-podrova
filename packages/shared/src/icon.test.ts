@@ -12,11 +12,11 @@ describe('renderIcon', () => {
     expect(pixel(pixels, size, 0, 0)[3]).toBe(0)
   })
 
-  it('фон круга — цвет состояния', () => {
+  it('фон круга - цвет состояния', () => {
     expect(pixel(pixels, size, 16, 4)).toEqual([...ICON_COLORS.on, 255])
   })
 
-  it('на линии «V» — белый', () => {
+  it('на линии «V» - белый', () => {
     expect(pixel(pixels, size, 16, 21)).toEqual([255, 255, 255, 255])
   })
 })

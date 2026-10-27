@@ -20,7 +20,7 @@ async function submit() {
 
   busy.value = true
   try {
-    // Запрос доступа — первым await: браузер разрешает его только в ответ на клик.
+    // Запрос доступа - первым await: браузер разрешает его только в ответ на клик.
     if (!(await requestSubscriptionAccess(validUrl))) {
       error.value = ru.subscriptions.accessDenied
       return

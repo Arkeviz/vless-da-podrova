@@ -8,5 +8,5 @@ export { getSettings, settingsItem, watchSettings } from './model/settings'
 export { useSettings } from './composables/useSettings'
 export { default as SettingsPanel } from './ui/SettingsPanel.vue'
 
-/** Настройки защиты и сети — входят в резервную копию. */
+/** Настройки защиты и сети - входят в резервную копию. */
 export const backupItems = [settingsItem]

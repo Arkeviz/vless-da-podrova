@@ -3,24 +3,26 @@
   Устанавливает нативный хелпер vless-da-podrova и sing-box, регистрирует native messaging host
   для Chrome, Edge, Яндекс Браузера и Firefox. Права администратора не нужны.
 
+  Работает в двух раскладках: из релизного архива (рядом лежат helper\, sing-box\, extension\)
+  и из репозитория (хелпер собран в packages\helper\dist).
+
 .EXAMPLE
-  .\scripts\install.ps1
-  .\scripts\install.ps1 -SingBoxZip C:\Downloads\sing-box-1.14.4-windows-amd64.zip
+  .\install.ps1
+  .\install.ps1 -SingBoxZip C:\Downloads\sing-box-1.14.4-windows-amd64.zip
 #>
 param(
-  # Собранный хелпер (pnpm --filter @vdp/helper build).
-  [string]$HelperExe = (Join-Path $PSScriptRoot '..\packages\helper\dist\vless-da-podrova-helper.exe'),
-  # Локальный архив sing-box вместо скачивания с GitHub.
-  [string]$SingBoxZip = '',
-  # Разрешить установку sing-box, если хеш в скрипте ещё не закреплён.
-  [switch]$AllowUnpinnedHash
+  # Хелпер: по умолчанию из релизного архива, а если его нет - из сборки репозитория.
+  [string]$HelperExe = '',
+  # Локальный архив sing-box вместо sing-box\ из релиза и скачивания с GitHub.
+  [string]$SingBoxZip = ''
 )
 
 $ErrorActionPreference = 'Stop'
 
-# --- Закреплённая версия ядра. Обновление = смена версии и хеша. ---
-$SingBoxVersion = '1.14.4'
-$SingBoxSha256 = '99185d75d314a07dbba4a130c8ad986cbeb629a07927975636b341ca61f991df'  # SHA256 архива sing-box-$SingBoxVersion-windows-amd64.zip
+# --- Закреплённая версия ядра и хеш архива: scripts\sing-box.json (общий с упаковкой релиза). ---
+$core = Get-Content -Raw -Encoding UTF8 (Join-Path $PSScriptRoot 'sing-box.json') | ConvertFrom-Json
+$SingBoxVersion = $core.version
+$SingBoxSha256 = $core.sha256  # SHA256 архива sing-box-$SingBoxVersion-windows-amd64.zip
 
 $HostName = 'com.vless_da_podrova.helper'
 # ID расширения в Chromium вычисляется из `key` в packages/extension/wxt.config.ts.
@@ -30,6 +32,15 @@ $FirefoxExtensionId = 'vless-da-podrova@extension'
 $InstallDir = Join-Path $env:LOCALAPPDATA 'vless-da-podrova'
 $HelperTarget = Join-Path $InstallDir 'vless-da-podrova-helper.exe'
 $CoreTarget = Join-Path $InstallDir 'sing-box.exe'
+
+$BundleHelper = Join-Path $PSScriptRoot 'helper\vless-da-podrova-helper.exe'
+$BundleCoreDir = Join-Path $PSScriptRoot 'sing-box'
+$BundleExtensions = Join-Path $PSScriptRoot 'extension'
+if (-not $HelperExe) {
+  $HelperExe = if (Test-Path $BundleHelper) { $BundleHelper } else {
+    Join-Path $PSScriptRoot '..\packages\helper\dist\vless-da-podrova-helper.exe'
+  }
+}
 
 $RegistryRoots = [ordered]@{
   'Chrome'          = 'HKCU:\Software\Google\Chrome\NativeMessagingHosts'
@@ -43,13 +54,13 @@ function Write-Step([string]$Message) { Write-Host "==> $Message" -ForegroundCol
 # --- Хелпер ---
 Write-Step 'Копирую хелпер'
 if (-not (Test-Path $HelperExe)) {
-  throw "Хелпер не найден: $HelperExe. Соберите его: pnpm --filter @vdp/helper build"
+  throw "Хелпер не найден: $HelperExe. Из репозитория его нужно собрать: pnpm --filter @vdp/helper build"
 }
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 try {
   Copy-Item -Force $HelperExe $HelperTarget
 } catch {
-  throw "Не удалось заменить $HelperTarget — вероятно, он запущен. Выключите прокси в расширении или закройте браузеры и повторите."
+  throw "Не удалось заменить $HelperTarget - вероятно, он запущен. Выключите прокси в расширении или закройте браузеры и повторите."
 }
 
 # --- sing-box ---
@@ -60,10 +71,28 @@ function Get-InstalledCoreVersion {
   return $null
 }
 
+function Copy-CoreFiles([string]$From) {
+  try {
+    Copy-Item -Force -Path (Join-Path $From '*') -Destination $InstallDir
+  } catch {
+    throw "Не удалось заменить sing-box - вероятно, он запущен. Выключите прокси в расширении и повторите."
+  }
+}
+
 $installedVersion = Get-InstalledCoreVersion
+$useBundledCore = (-not $SingBoxZip) -and (Test-Path (Join-Path $BundleCoreDir 'sing-box.exe'))
+
 if ($installedVersion -eq $SingBoxVersion) {
   Write-Step "sing-box $SingBoxVersion уже установлен"
+} elseif ($useBundledCore) {
+  Write-Step 'Копирую sing-box из релизного архива'
+  Copy-CoreFiles $BundleCoreDir
+  $bundledVersion = Get-InstalledCoreVersion
+  if ($bundledVersion -ne $SingBoxVersion) {
+    Write-Warning "В архиве sing-box $bundledVersion, а ожидался $SingBoxVersion."
+  }
 } else {
+  if (-not $SingBoxZip) { Write-Step 'sing-box в архиве не найден - скачиваю' }
   $archiveName = "sing-box-$SingBoxVersion-windows-amd64"
   $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) "vdp-$([guid]::NewGuid())"
   New-Item -ItemType Directory -Path $tempDir | Out-Null
@@ -79,27 +108,27 @@ if ($installedVersion -eq $SingBoxVersion) {
     }
 
     $actualHash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant()
-    if ($SingBoxSha256) {
-      if ($actualHash -ne $SingBoxSha256.ToLowerInvariant()) {
-        throw "Хеш архива sing-box не совпадает.`n  ожидался: $SingBoxSha256`n  получен:  $actualHash"
-      }
-    } elseif ($AllowUnpinnedHash) {
-      Write-Warning "Хеш не закреплён. Закрепите его в scripts/install.ps1: `$SingBoxSha256 = '$actualHash'"
-    } else {
-      throw "Хеш sing-box не закреплён в скрипте. Хеш скачанного архива: $actualHash`n" +
-        "Сверьте его и впишите в `$SingBoxSha256 в scripts/install.ps1 (или запустите с -AllowUnpinnedHash)."
+    if ($actualHash -ne $SingBoxSha256.ToLowerInvariant()) {
+      throw "Хеш архива sing-box не совпадает.`n  ожидался: $SingBoxSha256`n  получен:  $actualHash"
     }
 
     Write-Step "Распаковываю sing-box $SingBoxVersion"
     Expand-Archive -Path $zip -DestinationPath $tempDir -Force
-    $extracted = Join-Path $tempDir $archiveName
-    try {
-      Copy-Item -Force -Path (Join-Path $extracted '*') -Destination $InstallDir
-    } catch {
-      throw "Не удалось заменить sing-box — вероятно, он запущен. Выключите прокси в расширении и повторите."
-    }
+    Copy-CoreFiles (Join-Path $tempDir $archiveName)
   } finally {
     Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
+  }
+}
+
+# --- Расширения (только из релизного архива): кладём в папку установки, чтобы архив можно было удалить ---
+$ExtensionsTarget = Join-Path $InstallDir 'extension'
+if (Test-Path $BundleExtensions) {
+  Write-Step "Копирую расширения в $ExtensionsTarget"
+  try {
+    if (Test-Path $ExtensionsTarget) { Remove-Item -Recurse -Force $ExtensionsTarget }
+    Copy-Item -Recurse -Force $BundleExtensions $ExtensionsTarget
+  } catch {
+    Write-Warning "Не удалось обновить $ExtensionsTarget - закройте браузеры и повторите. Расширения можно взять и из папки архива."
   }
 }
 
@@ -135,3 +164,6 @@ foreach ($browser in $RegistryRoots.Keys) {
 }
 
 Write-Step "Готово. Установлено в $InstallDir (sing-box $(Get-InstalledCoreVersion))"
+if (Test-Path $ExtensionsTarget) {
+  Write-Host "Расширения: $ExtensionsTarget\chrome (Chrome, Edge, Яндекс) и $ExtensionsTarget\firefox"
+}

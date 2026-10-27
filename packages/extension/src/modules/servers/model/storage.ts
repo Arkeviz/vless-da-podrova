@@ -3,7 +3,7 @@ import { storage } from 'wxt/utils/storage'
 
 export interface StoredServer {
   id: string
-  /** Исходная ссылка — для экспорта и поиска дублей. */
+  /** Исходная ссылка - для экспорта и поиска дублей. */
   link: string
   server: VlessServer
 }
@@ -12,7 +12,7 @@ export interface Subscription {
   id: string
   url: string
   name: string
-  /** Имя задал пользователь — не перезаписывать его заголовком profile-title. */
+  /** Имя задал пользователь - не перезаписывать его заголовком profile-title. */
   customName: boolean
   updateIntervalHours: number
   lastUpdated: number | null

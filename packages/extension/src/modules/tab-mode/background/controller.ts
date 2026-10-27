@@ -14,8 +14,8 @@ import { setTabMode } from '../model/tab-mode'
 const LEARN_FLUSH_MS = 1_000
 
 /**
- * Фон: жизненный цикл режима вкладки — закрытие, наследование дочерними вкладками,
- * «всегда для сайта», а в Chromium — обучение доменам по запросам вкладки.
+ * Фон: жизненный цикл режима вкладки - закрытие, наследование дочерними вкладками,
+ * «всегда для сайта», а в Chromium - обучение доменам по запросам вкладки.
  */
 export class TabModeController {
   private tabIds = new Set<number>()
@@ -72,7 +72,7 @@ export class TabModeController {
     void this.syncActiveSites()
   }
 
-  /** Chromium: запрос вкладки в режиме — запоминаем домен для её сайта. */
+  /** Chromium: запрос вкладки в режиме - запоминаем домен для её сайта. */
   onRequest(details: { tabId: number; url: string; type: string }): void {
     if (details.tabId < 0) return
     if (details.type === 'main_frame') this.updateTabSite(details.tabId, details.url)
@@ -131,7 +131,7 @@ export class TabModeController {
 
 export function startTabMode(): void {
   const controller = new TabModeController()
-  // Слушатели регистрируются синхронно — иначе MV3 не разбудит фон на эти события.
+  // Слушатели регистрируются синхронно - иначе MV3 не разбудит фон на эти события.
   browser.tabs.onCreated.addListener((tab) => controller.onTabCreated(tab))
   browser.tabs.onRemoved.addListener((tabId) => controller.onTabRemoved(tabId))
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
