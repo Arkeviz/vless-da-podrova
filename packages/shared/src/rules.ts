@@ -31,7 +31,7 @@ export function isBrowserRule(rule: Rule): rule is BrowserRule {
   return rule.action !== 'block' && isDomainMatch(rule.match)
 }
 
-export function isDomainMatch(match: RuleMatch): match is { type: DomainMatchType; value: string } {
+function isDomainMatch(match: RuleMatch): match is { type: DomainMatchType; value: string } {
   return match.type === 'exact' || match.type === 'suffix' || match.type === 'keyword'
 }
 
@@ -135,7 +135,7 @@ function normalizeRuleSet(input: Extract<RuleMatchInput, { type: 'ruleSet' }>): 
   return { type: 'ruleSet', url: url.toString(), format, updateIntervalHours: hours }
 }
 
-export function guessRuleSetFormat(pathname: string): RuleSetFormat | null {
+function guessRuleSetFormat(pathname: string): RuleSetFormat | null {
   if (/\.srs$/i.test(pathname)) return 'binary'
   if (/\.json$/i.test(pathname)) return 'source'
   return null

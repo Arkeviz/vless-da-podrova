@@ -7,7 +7,7 @@ const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
 /** Chrome не принимает сообщения от хоста больше 1 МБ. */
-export const MAX_OUTGOING_MESSAGE_BYTES = 1024 * 1024
+const MAX_OUTGOING_MESSAGE_BYTES = 1024 * 1024
 
 export function encodeNativeMessage(message: unknown): Uint8Array {
   const body = encoder.encode(JSON.stringify(message))

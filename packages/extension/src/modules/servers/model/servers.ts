@@ -26,7 +26,7 @@ export function collectServers<T>(
   return [...manual, ...subscriptions.flatMap((s) => s.servers)]
 }
 
-export async function getAllServers(): Promise<StoredServer[]> {
+async function getAllServers(): Promise<StoredServer[]> {
   const [manual, subscriptions] = await Promise.all([serversItem.getValue(), subscriptionsItem.getValue()])
   return collectServers(manual, subscriptions)
 }

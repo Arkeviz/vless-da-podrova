@@ -4,7 +4,6 @@
  * diagnostics (теги серверов для замера задержки), фон (обновление подписок).
  */
 import { selectedServerIdItem, serversItem, subscriptionsItem } from './model/storage'
-export type { StoredServer } from './model/storage'
 export type { ServerLatency } from './model/latency'
 export type { ServerPool } from './model/servers'
 export { getServerPool, serverTag, watchServers } from './model/servers'

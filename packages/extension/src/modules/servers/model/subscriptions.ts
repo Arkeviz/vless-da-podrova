@@ -4,10 +4,10 @@ import { ru } from '@/common/i18n/ru'
 import { ensureValidSelection } from './servers'
 import { selectedServerIdItem, subscriptionsItem, type StoredServer, type Subscription } from './storage'
 
-export const DEFAULT_SUBSCRIPTION_UPDATE_HOURS = 12
+const DEFAULT_SUBSCRIPTION_UPDATE_HOURS = 12
 const FETCH_TIMEOUT_MS = 30_000
 
-export function originPattern(url: string): string {
+function originPattern(url: string): string {
   return `${new URL(url).origin}/*`
 }
 

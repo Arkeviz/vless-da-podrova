@@ -29,7 +29,7 @@ export function parseSubscription(body: string): ParsedSubscription {
   return result
 }
 
-export function decodeSubscriptionBody(body: string): string[] {
+function decodeSubscriptionBody(body: string): string[] {
   const trimmed = body.trim()
   const text = !trimmed.includes('://') && /^[A-Za-z0-9+/=_\-\s]+$/.test(trimmed)
     ? decodeBase64(trimmed)
@@ -40,7 +40,7 @@ export function decodeSubscriptionBody(body: string): string[] {
     .filter(Boolean)
 }
 
-export function decodeBase64(value: string): string {
+function decodeBase64(value: string): string {
   const normalized = value.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
   const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
   let binary: string

@@ -5,8 +5,8 @@ import { backupItems as serverItems } from '@/modules/servers'
 import { backupItems as settingsItems } from '@/modules/settings'
 import { backupItems as tabModeItems } from '@/modules/tab-mode'
 
-export const BACKUP_APP = 'vless-da-podrova'
-export const BACKUP_VERSION = 1
+const BACKUP_APP = 'vless-da-podrova'
+const BACKUP_VERSION = 1
 
 export interface BackupFile {
   app: typeof BACKUP_APP

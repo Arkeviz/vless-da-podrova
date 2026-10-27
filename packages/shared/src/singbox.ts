@@ -127,7 +127,7 @@ function buildProxyGroup(servers: readonly CoreServer[], selection: ServerSelect
   }
 }
 
-export function ruleSetTag(rule: Rule): string {
+function ruleSetTag(rule: Rule): string {
   return `rs-${rule.id}`
 }
 
@@ -215,7 +215,7 @@ function buildDns(dohUrl: string): Json {
   }
 }
 
-export function buildVlessOutbound(server: VlessServer, tag: string): Json {
+function buildVlessOutbound(server: VlessServer, tag: string): Json {
   const outbound: Json = {
     type: 'vless',
     tag,

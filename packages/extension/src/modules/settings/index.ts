@@ -4,8 +4,7 @@
  */
 import { settingsItem } from './model/settings'
 export type { Settings } from './model/settings'
-export { getSettings, settingsItem, watchSettings } from './model/settings'
-export { useSettings } from './composables/useSettings'
+export { getSettings, watchSettings } from './model/settings'
 export { default as SettingsPanel } from './ui/SettingsPanel.vue'
 
 /** Настройки защиты и сети - входят в резервную копию. */
