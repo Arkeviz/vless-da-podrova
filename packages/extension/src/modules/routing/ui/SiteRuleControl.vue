@@ -30,9 +30,9 @@ const scopes = computed<{ scope: Scope; label: string }[]>(() => {
     result.push({ scope: { kind: 'one', match: { type: 'suffix', value: domain } }, label: ru.routing.site.scopeDomain(domain) })
   }
   result.push({ scope: { kind: 'one', match: { type: 'exact', value: host } }, label: ru.routing.site.scopeHost(host) })
-  // Последней - чтобы при появлении новых доменов выбранная область не съезжала.
+  // Последней - чтобы при появлении новых доменов выбранная область не съезжала. Сайт страницы в списке есть всегда.
   const sites = props.tabSites ?? []
-  if (sites.length > 1) result.push({ scope: { kind: 'all', sites }, label: ru.routing.site.scopeAll(sites.length) })
+  if (sites.length > 0) result.push({ scope: { kind: 'all', sites }, label: ru.routing.site.scopeAll(sites.length) })
   return result
 })
 
